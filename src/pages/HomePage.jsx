@@ -16,7 +16,7 @@ const HomePage = () => {
         const { data: resources, error: resourcesError } = await supabase
           .from('resources')
           .select('*')
-          .eq('is_featured', true)
+          .eq('featured', true)
           .limit(6);
 
         if (resourcesError) throw resourcesError;
