@@ -4,27 +4,9 @@ import { supabase } from '../main';
 import { useUser } from '../context/UserContext';
 import SearchBar from '../components/SearchBar';
 
-// Category mapping from database categories to displayed categories with icons
-const categoryMapping = {
-  'assets': { name: 'Design', slug: 'design', icon: '🎨' },
-  'community': { name: 'Resources', slug: 'resources', icon: '📚' },
-  'design': { name: 'Design', slug: 'design', icon: '🎨' },
-  'reference': { name: 'Resources', slug: 'resources', icon: '📚' },
-  'tool': { name: 'Tools', slug: 'tools', icon: '🔧' },
-  'tutorial': { name: 'Development', slug: 'development', icon: '💻' },
-  'shop': { name: 'Resources', slug: 'resources', icon: '📚' }
-};
-
-// Display categories that should appear on the home page
-const displayCategories = [
-  { id: 'design', name: 'Design', slug: 'design', icon: '🎨' },
-  { id: 'development', name: 'Development', slug: 'development', icon: '💻' },
-  { id: 'tools', name: 'Tools', slug: 'tools', icon: '🔧' },
-  { id: 'resources', name: 'Resources', slug: 'resources', icon: '📚' }
-];
-
 const HomePage = () => {
   const [featuredResources, setFeaturedResources] = useState([]);
+  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useUser();
   const navigate = useNavigate();
@@ -41,6 +23,30 @@ const HomePage = () => {
 
         if (resourcesError) throw resourcesError;
         setFeaturedResources(resources || []);
+
+        // Get unique categories from resources table
+        const { data: resourceCategories, error: resourceCategoriesError } = await supabase
+          .from('resources')
+          .select('category')
+          .order('category');
+
+        if (resourceCategoriesError) throw resourceCategoriesError;
+        
+        // Extract unique categories
+        const uniqueCategories = [];
+        resourceCategories.forEach(item => {
+          if (item.category && !uniqueCategories.some(cat => cat.slug === item.category)) {
+            uniqueCategories.push({
+              id: uniqueCategories.length + 1,
+              name: item.category.charAt(0).toUpperCase() + item.category.slice(1),
+              slug: item.category,
+              icon: getCategoryIcon(item.category)
+            });
+          }
+        });
+        
+        setCategories(uniqueCategories);
+        console.log('Categories from resources:', uniqueCategories);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -50,6 +56,20 @@ const HomePage = () => {
 
     fetchData();
   }, []);
+
+  // Get icon for category
+  const getCategoryIcon = (category) => {
+    switch (category) {
+      case 'assets': return '🖼️';
+      case 'community': return '👥';
+      case 'design': return '🎨';
+      case 'reference': return '📚';
+      case 'tool': return '🔧';
+      case 'tutorial': return '📝';
+      case 'shop': return '🛒';
+      default: return '📦';
+    }
+  };
 
   // Handle search
   const handleSearch = (query) => {
@@ -99,6 +119,7 @@ const HomePage = () => {
   ];
 
   const displayResources = featuredResources.length > 0 ? featuredResources : placeholderResources;
+  const displayCategories = categories.length > 0 ? categories : [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -118,12 +139,14 @@ const HomePage = () => {
           </div>
           
           <div className="flex flex-wrap gap-4">
-            <Link to="/category/design" className="btn btn-primary">
-              Explore Design Resources
+            <Link to="/category/all" className="btn btn-primary">
+              Explore All Resources
             </Link>
-            <Link to="/category/development" className="btn btn-secondary">
-              Browse Development Tools
-            </Link>
+            {categories.length > 0 && (
+              <Link to={`/category/${categories[0].slug}`} className="btn btn-secondary">
+                Browse {categories[0].name}
+              </Link>
+            )}
           </div>
         </div>
       </section>
@@ -132,6 +155,14 @@ const HomePage = () => {
       <section className="mb-16">
         <h2 className="text-2xl font-bold mb-6">Browse Categories</h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <Link
+            key="all"
+            to="/category/all"
+            className="glass-card p-6 hover:bg-glass-300 transition-all"
+          >
+            <div className="text-3xl mb-2">🌐</div>
+            <h3 className="text-lg font-medium">All</h3>
+          </Link>
           {displayCategories.map((category) => (
             <Link
               key={category.id}

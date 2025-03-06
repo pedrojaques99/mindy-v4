@@ -6,18 +6,6 @@ import TagCloud from '../components/TagCloud';
 import ResourceCard from '../components/ResourceCard';
 import toast from 'react-hot-toast';
 
-// Category mapping from database categories to displayed categories
-const categoryMapping = {
-  // Database category -> Display category
-  'assets': 'design',
-  'community': 'resources',
-  'design': 'design',
-  'reference': 'resources',
-  'tool': 'tools',
-  'tutorial': 'development',
-  'shop': 'resources'
-};
-
 const CategoryPage = () => {
   const { category } = useParams();
   const location = useLocation();
@@ -57,7 +45,7 @@ const CategoryPage = () => {
     try {
       setLoading(true);
       
-      // Fetch category data
+      // Fetch category data if not 'all'
       if (category !== 'all') {
         const { data: catData, error: catError } = await supabase
           .from('categories')
@@ -77,17 +65,8 @@ const CategoryPage = () => {
       
       // Apply category filter
       if (category !== 'all') {
-        // Get all database categories that map to this display category
-        const dbCategories = Object.entries(categoryMapping)
-          .filter(([_, displayCategory]) => displayCategory === category)
-          .map(([dbCategory]) => dbCategory);
-        
-        if (dbCategories.length > 0) {
-          query = query.in('category', dbCategories);
-        } else {
-          // Fallback to direct matching if no mapping exists
-          query = query.eq('category', category);
-        }
+        // Filter directly by category
+        query = query.eq('category', category);
       }
       
       // Apply search query filter if present in URL
