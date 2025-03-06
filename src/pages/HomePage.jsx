@@ -32,6 +32,7 @@ const HomePage = () => {
 
         if (catsError) throw catsError;
         setCategories(cats || []);
+        console.log('Categories from database:', cats);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
