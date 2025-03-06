@@ -33,4 +33,14 @@
   .tag {
     @apply text-xs px-2 py-0.5 rounded-full bg-glass-100 text-gray-300;
   }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  }
+  
+  .text-shadow-lg {
+    text-shadow: 0 4px 8px rgba(0, 0, 0, 0.5);
+  }
 } 

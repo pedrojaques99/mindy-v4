@@ -1,13 +1,13 @@
 import { motion } from 'framer-motion';
 import { ExternalLinkIcon } from '@heroicons/react/outline';
 import GlassCard from './ui/GlassCard';
+import AutoThumbnail from './ui/AutoThumbnail';
+import { useState } from 'react';
 
 export default function FeaturedResource({ resource }) {
   if (!resource) return null;
   
-  // Generate placeholder thumbnail if none exists
-  const thumbnail = resource.image_url || 
-    `https://via.placeholder.com/1200x600/1a1a1a/bfff58?text=${encodeURIComponent(resource.title)}`;
+  const [imageError, setImageError] = useState(!resource.image_url);
   
   return (
     <GlassCard className="overflow-hidden group">
@@ -18,11 +18,22 @@ export default function FeaturedResource({ resource }) {
         className="block h-full"
       >
         <div className="relative aspect-[16/9] overflow-hidden">
-          <img 
-            src={thumbnail} 
-            alt={resource.title}
-            className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
-          />
+          {resource.image_url && !imageError ? (
+            <img 
+              src={resource.image_url} 
+              alt={resource.title}
+              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <AutoThumbnail 
+              title={resource.title}
+              category={resource.category}
+              subcategory={resource.subcategory}
+              tags={resource.tags}
+              className="w-full h-full transition-transform duration-700 group-hover:scale-105"
+            />
+          )}
           <div className="absolute inset-0 bg-gradient-to-t from-[#1a1a1a]/90 via-[#1a1a1a]/40 to-transparent flex flex-col justify-end p-6">
             <div className="mb-2">
               <span className="inline-block px-3 py-1 rounded-full text-xs font-medium bg-[#bfff58]/20 text-[#bfff58]">

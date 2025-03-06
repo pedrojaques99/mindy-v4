@@ -6,15 +6,13 @@ import { supabase } from '../main';
 import { useUser } from '../context/UserContext';
 import toast from 'react-hot-toast';
 import GlassCard from './ui/GlassCard';
+import AutoThumbnail from './ui/AutoThumbnail';
 
 export default function ResourceCard({ resource, delay = 0 }) {
   const { user } = useUser();
   const [isFavorited, setIsFavorited] = useState(resource.favorited || false);
   const [isLoading, setIsLoading] = useState(false);
-  
-  // Generate placeholder thumbnail if none exists
-  const thumbnail = resource.image_url || 
-    `https://via.placeholder.com/300x200/1a1a1a/bfff58?text=${encodeURIComponent(resource.title.substring(0, 15))}`;
+  const [imageError, setImageError] = useState(!resource.image_url);
   
   // Track resource view
   const trackView = async () => {
@@ -104,12 +102,23 @@ export default function ResourceCard({ resource, delay = 0 }) {
         delay={delay}
       >
         <div className="relative aspect-video">
-          <img 
-            src={thumbnail} 
-            alt={resource.title}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
+          {resource.image_url && !imageError ? (
+            <img 
+              src={resource.image_url} 
+              alt={resource.title}
+              className="w-full h-full object-cover"
+              loading="lazy"
+              onError={() => setImageError(true)}
+            />
+          ) : (
+            <AutoThumbnail 
+              title={resource.title}
+              category={resource.category}
+              subcategory={resource.subcategory}
+              tags={resource.tags}
+              className="w-full h-full"
+            />
+          )}
           
           <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#1a1a1a]/90 to-transparent p-3">
             <div className="flex justify-between items-center">
