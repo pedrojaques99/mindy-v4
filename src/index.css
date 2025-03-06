@@ -1,0 +1,36 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    font-family: 'Inter', system-ui, sans-serif;
+  }
+  
+  body {
+    @apply bg-dark-100 text-white;
+    background: linear-gradient(135deg, theme('colors.dark.100') 0%, theme('colors.dark.200') 100%);
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-glass-200 backdrop-blur-md border border-glass-300 rounded-xl shadow-xl;
+  }
+  
+  .btn {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-300 flex items-center justify-center;
+  }
+  
+  .btn-primary {
+    @apply bg-lime-accent/20 hover:bg-lime-accent/30 text-lime-accent;
+  }
+  
+  .btn-secondary {
+    @apply bg-glass-100 hover:bg-glass-200 text-white;
+  }
+  
+  .tag {
+    @apply text-xs px-2 py-0.5 rounded-full bg-glass-100 text-gray-300;
+  }
+} 

@@ -1,0 +1,47 @@
+# [MINDY]® Resource Library
+
+A modern dark bento box design resource library with glassmorphism effects.
+
+## Features
+
+- Dark theme with lime accent color (#bfff58)
+- Glassmorphism UI components
+- Bento box layout
+- User authentication
+- Resource favorites and collections
+- Progressive Web App capabilities
+- Search and filter functionality
+
+## Tech Stack
+
+- React + Vite
+- Tailwind CSS
+- Framer Motion
+- Supabase (Database, Auth, Storage)
+
+## Getting Started
+
+1. Clone the repository
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+3. Create a `.env` file with your Supabase credentials:
+   ```
+   VITE_SUPABASE_URL=your_supabase_url
+   VITE_SUPABASE_ANON_KEY=your_supabase_anon_key
+   ```
+4. Start the development server:
+   ```bash
+   npm run dev
+   ```
+
+## Build for Production
+
+```bash
+npm run build
+```
+
+## License
+
+All rights reserved. 
