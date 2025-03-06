@@ -14,61 +14,81 @@ const CategoryPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [allTags, setAllTags] = useState([]);
+  const [page, setPage] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const ITEMS_PER_PAGE = 12;
   
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch category data
-        if (category !== 'all') {
-          const { data: catData, error: catError } = await supabase
-            .from('categories')
-            .select('*')
-            .eq('slug', category)
-            .single();
-            
-          if (catError) throw catError;
-          setCategoryData(catData);
-        }
-        
-        // Fetch resources
-        let query = supabase.from('resources').select('*');
-        
-        if (category !== 'all') {
-          // Get category ID
-          const { data: catIdData } = await supabase
-            .from('categories')
-            .select('id')
-            .eq('slug', category)
-            .single();
-            
-          if (catIdData) {
-            query = query.eq('category', catIdData.id);
-          }
-        }
-        
-        const { data: resourcesData, error: resourcesError } = await query;
-        
-        if (resourcesError) throw resourcesError;
-        setResources(resourcesData || []);
-        
-        // Extract all unique tags
-        const tags = new Set();
-        resourcesData?.forEach(resource => {
-          resource.tags?.forEach(tag => tags.add(tag));
-        });
-        setAllTags(Array.from(tags));
-      } catch (error) {
-        console.error('Error fetching data:', error);
-        toast.error('Failed to load resources');
-      } finally {
-        setLoading(false);
-      }
-    };
-    
+    // Reset pagination when category changes
+    setPage(0);
+    setResources([]);
+    setHasMore(true);
     fetchData();
   }, [category]);
+  
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch category data
+      if (category !== 'all') {
+        const { data: catData, error: catError } = await supabase
+          .from('categories')
+          .select('*')
+          .eq('slug', category)
+          .single();
+          
+        if (catError) throw catError;
+        setCategoryData(catData);
+      }
+      
+      // Fetch resources with pagination
+      let query = supabase
+        .from('resources')
+        .select('*')
+        .range(page * ITEMS_PER_PAGE, (page * ITEMS_PER_PAGE) + ITEMS_PER_PAGE - 1);
+      
+      if (category !== 'all') {
+        // Get category ID
+        const { data: catIdData } = await supabase
+          .from('categories')
+          .select('id')
+          .eq('slug', category)
+          .single();
+          
+        if (catIdData) {
+          query = query.eq('category', catIdData.id);
+        }
+      }
+      
+      const { data: resourcesData, error: resourcesError } = await query;
+      
+      if (resourcesError) throw resourcesError;
+      
+      if (resourcesData.length < ITEMS_PER_PAGE) {
+        setHasMore(false);
+      }
+      
+      setResources(prev => [...prev, ...resourcesData]);
+      
+      // Extract all unique tags
+      const tags = new Set();
+      resourcesData?.forEach(resource => {
+        resource.tags?.forEach(tag => tags.add(tag));
+      });
+      setAllTags(prev => Array.from(new Set([...prev, ...Array.from(tags)])));
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      toast.error('Failed to load resources');
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  const loadMore = () => {
+    setPage(prev => prev + 1);
+    fetchData();
+  };
   
   // Filter resources based on search and tags
   const filteredResources = resources.filter(resource => {
@@ -150,16 +170,36 @@ const CategoryPage = () => {
       </div>
       
       {/* Resources grid */}
-      {loading ? (
+      {loading && resources.length === 0 ? (
         <div className="flex justify-center py-16">
           <div className="spinner"></div>
         </div>
       ) : filteredResources.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredResources.map(resource => (
-            <ResourceCard key={resource.id} resource={resource} />
-          ))}
-        </div>
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredResources.map(resource => (
+              <ResourceCard key={resource.id} resource={resource} />
+            ))}
+          </div>
+          
+          {hasMore && !loading && filteredResources.length === resources.length && (
+            <div className="flex justify-center mt-8">
+              <button 
+                onClick={loadMore}
+                className="btn btn-primary"
+                disabled={loading}
+              >
+                {loading ? 'Loading...' : 'Load More'}
+              </button>
+            </div>
+          )}
+          
+          {loading && resources.length > 0 && (
+            <div className="flex justify-center mt-8">
+              <div className="spinner"></div>
+            </div>
+          )}
+        </>
       ) : (
         <div className="glass-card p-8 text-center">
           <h2 className="text-xl font-medium mb-4">No resources found</h2>
