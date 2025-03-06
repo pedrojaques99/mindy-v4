@@ -195,7 +195,7 @@ const SubmitResourcePage = () => {
               >
                 <option value="">Select a category</option>
                 {categories.map((category) => (
-                  <option key={category.id} value={category.id}>
+                  <option key={category.id} value={category.slug}>
                     {category.name}
                   </option>
                 ))}

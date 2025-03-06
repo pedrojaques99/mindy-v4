@@ -33,7 +33,7 @@ const ResourceDetailPage = () => {
           const { data: categoryData, error: categoryError } = await supabase
             .from('categories')
             .select('*')
-            .eq('id', resourceData.category)
+            .eq('slug', resourceData.category)
             .single();
             
           if (!categoryError) {
