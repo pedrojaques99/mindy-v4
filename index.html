@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="MINDY - A curated collection of design and development resources">
+  <meta name="theme-color" content="#1a1a1a">
+  
+  <title>[MINDY]® Resource Library</title>
+  
+  <!-- Favicon -->
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  
+  <!-- PWA manifest -->
+  <link rel="manifest" href="/manifest.json">
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- Base styles -->
+  <style>
+    :root {
+      --color-dark-100: #1a1a1a;
+      --color-dark-200: #222222;
+      --color-dark-300: #2a2a2a;
+      --color-dark-400: #333333;
+      --color-dark-500: #3a3a3a;
+      --color-lime-accent: #bfff58;
+      --color-glass-100: rgba(255, 255, 255, 0.05);
+      --color-glass-200: rgba(255, 255, 255, 0.1);
+      --color-glass-300: rgba(255, 255, 255, 0.15);
+    }
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    html, body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+      background-color: var(--color-dark-100);
+      color: white;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    
+    body {
+      background: linear-gradient(135deg, var(--color-dark-100) 0%, var(--color-dark-200) 100%);
+    }
+    
+    #root {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .loading-screen {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--color-dark-100) 0%, var(--color-dark-200) 100%);
+    }
+    
+    .logo {
+      font-size: 2.5rem;
+      font-weight: bold;
+      margin-bottom: 2rem;
+    }
+    
+    .logo-bracket {
+      color: white;
+    }
+    
+    .logo-text {
+      color: var(--color-lime-accent);
+    }
+    
+    .logo-sup {
+      font-size: 0.75rem;
+      vertical-align: super;
+    }
+    
+    .spinner {
+      width: 40px;
+      height: 40px;
+      border: 3px solid var(--color-glass-200);
+      border-top-color: var(--color-lime-accent);
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+    }
+    
+    @keyframes spin {
+      to {
+        transform: rotate(360deg);
+      }
+    }
+    
+    .glass-card {
+      background-color: var(--color-glass-200);
+      backdrop-filter: blur(10px);
+      border: 1px solid var(--color-glass-300);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+  </style>
+</head>
+<body>
+  <div id="root">
+    <div class="loading-screen">
+      <div class="logo">
+        <span class="logo-bracket">[</span>
+        <span class="logo-text">MINDY</span>
+        <span class="logo-bracket">]</span>
+        <sup class="logo-sup">®</sup>
+      </div>
+      <div class="spinner"></div>
+    </div>
+  </div>
+  
+  <!-- App scripts -->
+  <script type="module" src="/src/main.jsx"></script>
+  
+  <!-- PWA service worker registration -->
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('/service-worker.js')
+          .then(registration => {
+            console.log('SW registered:', registration);
+          })
+          .catch(error => {
+            console.log('SW registration failed:', error);
+          });
+      });
+    }
+  </script>
+</body>
+</html>
