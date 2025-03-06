@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
+import { SearchIcon } from '@heroicons/react/outline';
 
 const Navbar = ({ onOpenAuth }) => {
   const { user, signOut } = useUser();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -14,6 +16,14 @@ const Navbar = ({ onOpenAuth }) => {
   const handleSignOut = async () => {
     await signOut();
     navigate('/');
+  };
+  
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/category/all?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
   };
 
   return (
@@ -28,6 +38,20 @@ const Navbar = ({ onOpenAuth }) => {
             <sup className="text-xs">®</sup>
           </div>
         </Link>
+
+        {/* Search Bar (Desktop) */}
+        <div className="hidden md:block flex-grow max-w-md mx-4">
+          <form onSubmit={handleSearch} className="relative">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search resources..."
+              className="w-full py-1.5 px-4 pl-9 bg-dark-300 border border-glass-200 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-lime-accent"
+            />
+            <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
+          </form>
+        </div>
 
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
@@ -92,6 +116,18 @@ const Navbar = ({ onOpenAuth }) => {
       {isMenuOpen && (
         <div className="md:hidden bg-dark-300 border-t border-glass-100">
           <div className="container mx-auto px-4 py-2 flex flex-col">
+            {/* Mobile Search */}
+            <form onSubmit={handleSearch} className="relative mb-3">
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Search resources..."
+                className="w-full py-2 px-4 pl-9 bg-dark-400 border border-glass-200 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-lime-accent"
+              />
+              <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/50" />
+            </form>
+            
             <Link to="/" className="py-2 text-white/80 hover:text-lime-accent">
               Home
             </Link>

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '../main';
 import SearchBar from '../components/SearchBar';
 import TagCloud from '../components/TagCloud';
@@ -8,6 +8,8 @@ import toast from 'react-hot-toast';
 
 const CategoryPage = () => {
   const { category } = useParams();
+  const location = useLocation();
+  const navigate = useNavigate();
   const [categoryData, setCategoryData] = useState(null);
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -18,13 +20,26 @@ const CategoryPage = () => {
   const [hasMore, setHasMore] = useState(true);
   const ITEMS_PER_PAGE = 12;
   
+  // Parse query parameters
   useEffect(() => {
-    // Reset pagination when category changes
+    const queryParams = new URLSearchParams(location.search);
+    const searchParam = queryParams.get('search');
+    const tagParam = queryParams.get('tag');
+    
+    if (searchParam) {
+      setSearchQuery(searchParam);
+    }
+    
+    if (tagParam) {
+      setSelectedTags([tagParam]);
+    }
+    
+    // Reset pagination when URL changes
     setPage(0);
     setResources([]);
     setHasMore(true);
     fetchData();
-  }, [category]);
+  }, [location.search, category]);
   
   const fetchData = async () => {
     try {
@@ -48,6 +63,7 @@ const CategoryPage = () => {
         .select('*')
         .range(page * ITEMS_PER_PAGE, (page * ITEMS_PER_PAGE) + ITEMS_PER_PAGE - 1);
       
+      // Apply category filter
       if (category !== 'all') {
         // Get category ID
         const { data: catIdData } = await supabase
@@ -61,6 +77,13 @@ const CategoryPage = () => {
         }
       }
       
+      // Apply search query filter if present in URL
+      const urlParams = new URLSearchParams(location.search);
+      const urlSearchQuery = urlParams.get('search');
+      if (urlSearchQuery) {
+        query = query.or(`title.ilike.%${urlSearchQuery}%,description.ilike.%${urlSearchQuery}%`);
+      }
+      
       const { data: resourcesData, error: resourcesError } = await query;
       
       if (resourcesError) throw resourcesError;
@@ -69,7 +92,17 @@ const CategoryPage = () => {
         setHasMore(false);
       }
       
-      setResources(prev => [...prev, ...resourcesData]);
+      // Filter by tag if present in URL
+      const urlTagQuery = urlParams.get('tag');
+      let filteredResources = resourcesData;
+      
+      if (urlTagQuery) {
+        filteredResources = resourcesData.filter(resource => 
+          resource.tags && resource.tags.includes(urlTagQuery)
+        );
+      }
+      
+      setResources(prev => [...prev, ...filteredResources]);
       
       // Extract all unique tags
       const tags = new Set();
@@ -110,15 +143,38 @@ const CategoryPage = () => {
         ? prev.filter(t => t !== tag)
         : [...prev, tag]
     );
+    
+    // Update URL with selected tag
+    const params = new URLSearchParams(location.search);
+    if (!prev.includes(tag)) {
+      params.set('tag', tag);
+    } else {
+      params.delete('tag');
+    }
+    
+    navigate(`${location.pathname}?${params.toString()}`);
   };
   
   const handleSearch = (query) => {
     setSearchQuery(query);
+    
+    // Update URL with search query
+    const params = new URLSearchParams(location.search);
+    if (query) {
+      params.set('search', query);
+    } else {
+      params.delete('search');
+    }
+    
+    navigate(`${location.pathname}?${params.toString()}`);
   };
   
   const clearFilters = () => {
     setSearchQuery('');
     setSelectedTags([]);
+    
+    // Clear URL parameters
+    navigate(location.pathname);
   };
   
   return (

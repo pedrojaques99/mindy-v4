@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../main';
 import { useUser } from '../context/UserContext';
+import SearchBar from '../components/SearchBar';
 
 const HomePage = () => {
   const [featuredResources, setFeaturedResources] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useUser();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -39,6 +41,13 @@ const HomePage = () => {
 
     fetchData();
   }, []);
+
+  // Handle search
+  const handleSearch = (query) => {
+    if (query.trim()) {
+      navigate(`/category/all?search=${encodeURIComponent(query.trim())}`);
+    }
+  };
 
   // Placeholder data for development
   const placeholderResources = [
@@ -101,6 +110,12 @@ const HomePage = () => {
           <p className="text-white/80 text-lg mb-8 max-w-2xl">
             MINDY is a collection of high-quality resources, tools, and inspiration to help you build better projects.
           </p>
+          
+          {/* Search Bar */}
+          <div className="mb-8">
+            <SearchBar onSearch={handleSearch} />
+          </div>
+          
           <div className="flex flex-wrap gap-4">
             <Link to="/category/design" className="btn btn-primary">
               Explore Design Resources
