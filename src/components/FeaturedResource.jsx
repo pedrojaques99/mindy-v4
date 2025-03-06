@@ -6,7 +6,7 @@ export default function FeaturedResource({ resource }) {
   if (!resource) return null;
   
   // Generate placeholder thumbnail if none exists
-  const thumbnail = resource.thumbnail_url || 
+  const thumbnail = resource.image_url || 
     `https://via.placeholder.com/1200x600/1a1a1a/bfff58?text=${encodeURIComponent(resource.title)}`;
   
   return (

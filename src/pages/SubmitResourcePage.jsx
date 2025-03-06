@@ -14,7 +14,7 @@ const SubmitResourcePage = () => {
     description: '',
     url: '',
     image_url: '',
-    category_id: '',
+    category: '',
     tags: '',
   });
   
@@ -69,10 +69,10 @@ const SubmitResourcePage = () => {
             description: formData.description,
             url: formData.url,
             image_url: formData.image_url || null,
-            category_id: formData.category_id,
+            category: formData.category,
             tags: tagsArray,
             user_id: user.id,
-            is_approved: false,
+            approved: false,
           },
         ])
         .select();
@@ -181,13 +181,13 @@ const SubmitResourcePage = () => {
             </div>
             
             <div>
-              <label htmlFor="category_id" className="block text-sm font-medium mb-1">
+              <label htmlFor="category" className="block text-sm font-medium mb-1">
                 Category *
               </label>
               <select
-                id="category_id"
-                name="category_id"
-                value={formData.category_id}
+                id="category"
+                name="category"
+                value={formData.category}
                 onChange={handleChange}
                 className="w-full px-4 py-2 bg-dark-400 border border-glass-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-accent"
                 required

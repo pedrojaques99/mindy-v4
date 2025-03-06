@@ -9,11 +9,11 @@ import GlassCard from './ui/GlassCard';
 
 export default function ResourceCard({ resource, delay = 0 }) {
   const { user } = useUser();
-  const [isFavorited, setIsFavorited] = useState(resource.is_favorited || false);
+  const [isFavorited, setIsFavorited] = useState(resource.favorited || false);
   const [isLoading, setIsLoading] = useState(false);
   
   // Generate placeholder thumbnail if none exists
-  const thumbnail = resource.thumbnail_url || 
+  const thumbnail = resource.image_url || 
     `https://via.placeholder.com/300x200/1a1a1a/bfff58?text=${encodeURIComponent(resource.title.substring(0, 15))}`;
   
   // Track resource view

@@ -44,7 +44,7 @@ const CategoryPage = () => {
             .single();
             
           if (catIdData) {
-            query = query.eq('category_id', catIdData.id);
+            query = query.eq('category', catIdData.id);
           }
         }
         

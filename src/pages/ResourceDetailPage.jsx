@@ -29,11 +29,11 @@ const ResourceDetailPage = () => {
         setResource(resourceData);
         
         // Fetch category
-        if (resourceData.category_id) {
+        if (resourceData.category) {
           const { data: categoryData, error: categoryError } = await supabase
             .from('categories')
             .select('*')
-            .eq('id', resourceData.category_id)
+            .eq('id', resourceData.category)
             .single();
             
           if (!categoryError) {
@@ -60,7 +60,7 @@ const ResourceDetailPage = () => {
         const { data: relatedData, error: relatedError } = await supabase
           .from('resources')
           .select('*')
-          .eq('category_id', resourceData.category_id)
+          .eq('category', resourceData.category)
           .neq('id', id)
           .limit(3);
           
