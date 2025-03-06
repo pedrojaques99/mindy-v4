@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client';
 import App from './App';
 import { createClient } from '@supabase/supabase-js';
 import { Toaster } from 'react-hot-toast';
+import { Analytics } from '@vercel/analytics/react';
 import './index.css';
 
 // Initialize Supabase client
@@ -13,6 +14,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <App />
+    <Analytics />
     <Toaster
       position="bottom-right"
       toastOptions={{
