@@ -4,9 +4,27 @@ import { supabase } from '../main';
 import { useUser } from '../context/UserContext';
 import SearchBar from '../components/SearchBar';
 
+// Category mapping from database categories to displayed categories with icons
+const categoryMapping = {
+  'assets': { name: 'Design', slug: 'design', icon: '🎨' },
+  'community': { name: 'Resources', slug: 'resources', icon: '📚' },
+  'design': { name: 'Design', slug: 'design', icon: '🎨' },
+  'reference': { name: 'Resources', slug: 'resources', icon: '📚' },
+  'tool': { name: 'Tools', slug: 'tools', icon: '🔧' },
+  'tutorial': { name: 'Development', slug: 'development', icon: '💻' },
+  'shop': { name: 'Resources', slug: 'resources', icon: '📚' }
+};
+
+// Display categories that should appear on the home page
+const displayCategories = [
+  { id: 'design', name: 'Design', slug: 'design', icon: '🎨' },
+  { id: 'development', name: 'Development', slug: 'development', icon: '💻' },
+  { id: 'tools', name: 'Tools', slug: 'tools', icon: '🔧' },
+  { id: 'resources', name: 'Resources', slug: 'resources', icon: '📚' }
+];
+
 const HomePage = () => {
   const [featuredResources, setFeaturedResources] = useState([]);
-  const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
   const { user } = useUser();
   const navigate = useNavigate();
@@ -23,16 +41,6 @@ const HomePage = () => {
 
         if (resourcesError) throw resourcesError;
         setFeaturedResources(resources || []);
-
-        // Fetch categories
-        const { data: cats, error: catsError } = await supabase
-          .from('categories')
-          .select('*')
-          .order('name');
-
-        if (catsError) throw catsError;
-        setCategories(cats || []);
-        console.log('Categories from database:', cats);
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
@@ -90,15 +98,7 @@ const HomePage = () => {
     },
   ];
 
-  const placeholderCategories = [
-    { id: 1, name: 'Design', slug: 'design', icon: '🎨' },
-    { id: 2, name: 'Development', slug: 'development', icon: '💻' },
-    { id: 3, name: 'Tools', slug: 'tools', icon: '🔧' },
-    { id: 4, name: 'Resources', slug: 'resources', icon: '📚' },
-  ];
-
   const displayResources = featuredResources.length > 0 ? featuredResources : placeholderResources;
-  const displayCategories = categories.length > 0 ? categories : placeholderCategories;
 
   return (
     <div className="container mx-auto px-4 py-8">
