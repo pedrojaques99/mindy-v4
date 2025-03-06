@@ -65,16 +65,8 @@ const CategoryPage = () => {
       
       // Apply category filter
       if (category !== 'all') {
-        // Get category ID
-        const { data: catIdData } = await supabase
-          .from('categories')
-          .select('id')
-          .eq('slug', category)
-          .single();
-          
-        if (catIdData) {
-          query = query.eq('category', catIdData.id);
-        }
+        // Filter directly by category name/slug instead of ID
+        query = query.eq('category', category);
       }
       
       // Apply search query filter if present in URL
