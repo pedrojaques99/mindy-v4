@@ -47,14 +47,25 @@ const CategoryPage = () => {
       
       // Fetch category data if not 'all'
       if (category !== 'all') {
+        // Don't use .single() as it throws an error when no rows are found
         const { data: catData, error: catError } = await supabase
           .from('categories')
           .select('*')
-          .eq('slug', category)
-          .single();
+          .eq('slug', category);
           
         if (catError) throw catError;
-        setCategoryData(catData);
+        
+        // Set category data if found, otherwise create a default one based on the slug
+        if (catData && catData.length > 0) {
+          setCategoryData(catData[0]);
+        } else {
+          // Create a default category object based on the slug
+          setCategoryData({
+            name: category.charAt(0).toUpperCase() + category.slice(1),
+            description: `Browse our curated collection of ${category} resources`,
+            slug: category
+          });
+        }
       }
       
       // Fetch resources with pagination
