@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { HeartIcon, ShareIcon, ExternalLinkIcon, ChatAltIcon } from '@heroicons/react/outline';
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/solid';
 import { supabase } from '../main';
@@ -13,6 +13,7 @@ import { getWebsiteThumbnail, getWebsiteFavicon } from '../utils/thumbnailUtils'
 
 export default function ResourceCard({ resource, delay = 0 }) {
   const { user } = useUser();
+  const navigate = useNavigate();
   const [isFavorited, setIsFavorited] = useState(resource.favorited || false);
   const [isLoading, setIsLoading] = useState(false);
   const [imageError, setImageError] = useState(!resource.image_url);
@@ -148,14 +149,21 @@ export default function ResourceCard({ resource, delay = 0 }) {
   
   // Handle card click
   const handleCardClick = (e) => {
-    // If the click is on a button, don't open the preview
-    if (e.target.closest('button')) return;
+    // If the click is on a button or link, don't open the preview
+    if (e.target.closest('button') || e.target.closest('a')) return;
     
     // Track view
     trackView();
     
     // Show preview modal
     setShowPreview(true);
+  };
+  
+  // Navigate to tag filter
+  const handleTagClick = (e, tag) => {
+    e.preventDefault();
+    e.stopPropagation();
+    navigate(`/category/all?tag=${encodeURIComponent(tag)}`);
   };
   
   // Handle image error
@@ -168,6 +176,16 @@ export default function ResourceCard({ resource, delay = 0 }) {
       if (thumbnail) {
         setThumbnailUrl(thumbnail);
       }
+    }
+  };
+  
+  // Open external URL
+  const openExternalUrl = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (resource.url) {
+      window.open(resource.url, '_blank', 'noopener,noreferrer');
     }
   };
   
@@ -228,6 +246,14 @@ export default function ResourceCard({ resource, delay = 0 }) {
               >
                 <ShareIcon className="w-4 h-4" />
               </button>
+              
+              <button 
+                onClick={openExternalUrl}
+                className="p-1.5 rounded-full bg-dark-100/70 backdrop-blur-sm text-white/80 hover:text-lime-accent transition-colors duration-200"
+                aria-label="Open external link"
+              >
+                <ExternalLinkIcon className="w-4 h-4" />
+              </button>
             </div>
           </div>
           
@@ -247,12 +273,16 @@ export default function ResourceCard({ resource, delay = 0 }) {
             {resource.tags && resource.tags.length > 0 && (
               <div className="mt-3 flex flex-wrap gap-1">
                 {resource.tags.slice(0, 3).map((tag, index) => (
-                  <span key={index} className="tag">
+                  <button 
+                    key={index} 
+                    className="tag hover:bg-glass-200 transition-colors"
+                    onClick={(e) => handleTagClick(e, tag)}
+                  >
                     {tag.includes(':') ? (
                       <SoftwareIcon name={tag.split(':')[1]} className="mr-1" />
                     ) : null}
                     {tag.includes(':') ? tag.split(':')[1] : tag}
-                  </span>
+                  </button>
                 ))}
                 {resource.tags.length > 3 && (
                   <span className="tag">+{resource.tags.length - 3}</span>
@@ -262,10 +292,18 @@ export default function ResourceCard({ resource, delay = 0 }) {
             
             {/* Footer */}
             <div className="mt-3 flex items-center justify-between text-xs text-white/50">
-              <div className="flex items-center">
+              <button 
+                className="flex items-center hover:text-white transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setShowPreview(true);
+                  // Set active tab to comments in the modal
+                  // This will be handled in the modal component
+                }}
+              >
                 <ChatAltIcon className="w-3.5 h-3.5 mr-1" />
                 <span>{commentCount} comment{commentCount !== 1 ? 's' : ''}</span>
-              </div>
+              </button>
               
               <div className="flex items-center">
                 <ExternalLinkIcon className="w-3.5 h-3.5 mr-1" />
@@ -284,6 +322,7 @@ export default function ResourceCard({ resource, delay = 0 }) {
           resource={resource}
           isOpen={showPreview}
           onClose={() => setShowPreview(false)}
+          initialTab="details"
         />
       )}
     </>
