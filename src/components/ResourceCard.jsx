@@ -1,182 +1,153 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { HeartIcon, ShareIcon } from '@heroicons/react/outline';
-import { HeartIcon as HeartSolidIcon } from '@heroicons/react/solid';
-import { supabase } from '../main';
-import { useUser } from '../context/UserContext';
-import toast from 'react-hot-toast';
-import GlassCard from './ui/GlassCard';
-import AutoThumbnail from './ui/AutoThumbnail';
+import React, { useState, useEffect } from 'react';
+import { motion } from 'framer-motion';
+import { ChatAltIcon, ThumbUpIcon } from '@heroicons/react/outline';
+import { getWebsiteFavicon, getWebsiteThumbnail } from '../utils/thumbnailUtils';
 
-export default function ResourceCard({ resource, delay = 0 }) {
-  const { user } = useUser();
-  const [isFavorited, setIsFavorited] = useState(resource.favorited || false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [imageError, setImageError] = useState(!resource.image_url);
+const ResourceCard = ({ resource, onCardClick }) => {
+  const [thumbnail, setThumbnail] = useState(null);
+  const [favicon, setFavicon] = useState(null);
   
-  // Track resource view
-  const trackView = async () => {
-    if (!user) return;
-    
-    await supabase
-      .from('resource_views')
-      .insert([
-        { resource_id: resource.id, user_id: user.id }
-      ]);
+  useEffect(() => {
+    // Get website thumbnail
+    if (resource.url) {
+      const thumbnailUrl = getWebsiteThumbnail(resource.url);
+      setThumbnail(thumbnailUrl);
       
-    // Update popularity
-    await supabase
-      .rpc('increment_popularity', { resource_id: resource.id })
-      .catch(error => console.error('Error incrementing popularity:', error));
+      // Get favicon
+      const faviconUrl = getWebsiteFavicon(resource.url);
+      setFavicon(faviconUrl);
+    }
+  }, [resource.url]);
+  
+  // Format date
+  const formatDate = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric',
+      year: 'numeric'
+    });
   };
   
-  // Toggle favorite
-  const toggleFavorite = async (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (!user) {
-      toast('Please sign in to save favorites', { icon: '🔒' });
-      return;
-    }
-    
-    setIsLoading(true);
-    
-    if (isFavorited) {
-      // Remove from favorites
-      const { error } = await supabase
-        .from('favorites')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('resource_id', resource.id);
-        
-      if (!error) {
-        setIsFavorited(false);
-        toast('Removed from favorites', { icon: '💔' });
-      }
-    } else {
-      // Add to favorites
-      const { error } = await supabase
-        .from('favorites')
-        .insert([
-          { user_id: user.id, resource_id: resource.id }
-        ]);
-        
-      if (!error) {
-        setIsFavorited(true);
-        toast('Added to favorites', { icon: '❤️' });
-      }
-    }
-    
-    setIsLoading(false);
-  };
-  
-  // Share resource
-  const shareResource = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (navigator.share) {
-      navigator.share({
-        title: resource.title,
-        text: resource.description,
-        url: `/resource/${resource.id}`,
-      });
-    } else {
-      // Fallback for browsers that don't support share API
-      navigator.clipboard.writeText(`${window.location.origin}/resource/${resource.id}`);
-      toast('Link copied to clipboard', { icon: '📋' });
-    }
-  };
+  // Get comment count
+  const commentCount = resource.comments?.[0]?.count || 0;
   
   return (
-    <a 
-      href={resource.url} 
-      target="_blank" 
-      rel="noopener noreferrer"
-      onClick={trackView}
+    <motion.div
+      whileHover={{ y: -4 }}
+      transition={{ type: 'spring', stiffness: 400, damping: 17 }}
+      className="bg-dark-200 rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-all cursor-pointer"
+      onClick={() => onCardClick(resource)}
     >
-      <GlassCard 
-        className="h-full overflow-hidden hover:border-[#bfff58]/50 transition-all duration-300"
-        hoverEffect={true}
-        delay={delay}
-      >
-        <div className="relative aspect-video">
-          {resource.image_url && !imageError ? (
-            <img 
-              src={resource.image_url} 
-              alt={resource.title}
-              className="w-full h-full object-cover"
-              loading="lazy"
-              onError={() => setImageError(true)}
-            />
-          ) : (
-            <AutoThumbnail 
-              title={resource.title}
-              category={resource.category}
-              subcategory={resource.subcategory}
-              tags={resource.tags}
-              className="w-full h-full"
-            />
+      {/* Thumbnail */}
+      <div className="aspect-video bg-dark-300 relative overflow-hidden">
+        {thumbnail ? (
+          <img 
+            src={thumbnail} 
+            alt={resource.title} 
+            className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-dark-300">
+            {favicon ? (
+              <img 
+                src={favicon} 
+                alt="" 
+                className="w-12 h-12 opacity-50"
+              />
+            ) : (
+              <div className="text-3xl opacity-30">🔗</div>
+            )}
+          </div>
+        )}
+        
+        {/* Category tag */}
+        <div className="absolute top-2 left-2">
+          <span className="inline-block px-2 py-1 text-xs font-medium rounded-md bg-dark-400/80 text-gray-300 backdrop-blur-sm">
+            {resource.category || resource.categories?.name || 'Resource'}
+          </span>
+        </div>
+      </div>
+      
+      {/* Content */}
+      <div className="p-4">
+        {/* Title and favicon */}
+        <div className="flex items-start gap-3 mb-2">
+          {favicon && (
+            <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden bg-dark-400 p-0.5">
+              <img 
+                src={favicon} 
+                alt="" 
+                className="w-full h-full object-contain"
+              />
+            </div>
           )}
           
-          <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#1a1a1a]/90 to-transparent p-3">
-            <div className="flex justify-between items-center">
-              <span className="text-xs font-medium px-2 py-1 rounded-full bg-[#bfff58]/20 text-[#bfff58]">
-                {resource.subcategory}
-              </span>
-              
-              <div className="flex space-x-2">
-                <button 
-                  onClick={toggleFavorite}
-                  disabled={isLoading}
-                  className="p-1.5 rounded-full bg-[#222222]/80 backdrop-blur-sm hover:bg-[#2a2a2a]/80 transition-colors"
-                >
-                  {isFavorited ? (
-                    <HeartSolidIcon className="w-4 h-4 text-[#bfff58]" />
-                  ) : (
-                    <HeartIcon className="w-4 h-4 text-white" />
-                  )}
-                </button>
-                
-                <button 
-                  onClick={shareResource}
-                  className="p-1.5 rounded-full bg-[#222222]/80 backdrop-blur-sm hover:bg-[#2a2a2a]/80 transition-colors"
-                >
-                  <ShareIcon className="w-4 h-4 text-white" />
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-4">
-          <h3 className="font-bold text-lg text-white line-clamp-1 mb-1">
+          <h3 className="text-white font-medium text-base leading-tight flex-1">
             {resource.title}
           </h3>
-          
-          <p className="text-gray-300 text-sm line-clamp-2 mb-3">
-            {resource.description}
-          </p>
-          
-          <div className="flex flex-wrap gap-1">
-            {resource.tags && resource.tags.slice(0, 3).map(tag => (
+        </div>
+        
+        {/* Description */}
+        <p className="text-gray-400 text-sm mb-3 line-clamp-2">
+          {resource.description}
+        </p>
+        
+        {/* Tags */}
+        {resource.tags && resource.tags.length > 0 && (
+          <div className="flex flex-wrap gap-1 mb-3">
+            {resource.tags.slice(0, 3).map((tag, index) => (
               <span 
-                key={tag} 
-                className="text-xs px-2 py-0.5 rounded-full bg-[rgba(255,255,255,0.05)] text-gray-300"
+                key={index} 
+                className="inline-block px-2 py-0.5 text-xs bg-dark-300 text-gray-400 rounded"
               >
                 {tag}
               </span>
             ))}
-            
-            {resource.tags && resource.tags.length > 3 && (
-              <span className="text-xs px-2 py-0.5 rounded-full bg-[rgba(255,255,255,0.05)] text-gray-300">
+            {resource.tags.length > 3 && (
+              <span className="inline-block px-2 py-0.5 text-xs bg-dark-300 text-gray-400 rounded">
                 +{resource.tags.length - 3}
               </span>
             )}
           </div>
+        )}
+        
+        {/* Footer */}
+        <div className="flex items-center justify-between text-xs text-gray-500 pt-2 border-t border-dark-300">
+          {/* User and date */}
+          <div className="flex items-center">
+            {resource.profiles?.avatar_url && (
+              <img 
+                src={resource.profiles.avatar_url} 
+                alt="" 
+                className="w-4 h-4 rounded-full mr-1"
+              />
+            )}
+            <span>
+              {resource.profiles?.username || 'User'} • {formatDate(resource.created_at)}
+            </span>
+          </div>
+          
+          {/* Stats */}
+          <div className="flex items-center space-x-3">
+            {/* Comments count */}
+            <div className="flex items-center">
+              <ChatAltIcon className="w-3 h-3 mr-1" />
+              <span>{commentCount}</span>
+            </div>
+            
+            {/* Upvotes count */}
+            <div className="flex items-center">
+              <ThumbUpIcon className="w-3 h-3 mr-1" />
+              <span>{resource.upvotes || 0}</span>
+            </div>
+          </div>
         </div>
-      </GlassCard>
-    </a>
+      </div>
+    </motion.div>
   );
-} 
+};
+
+export default ResourceCard; 

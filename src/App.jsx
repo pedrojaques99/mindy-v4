@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
 import { supabase } from './main';
 
 // Components
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import AuthModal from './components/AuthModal';
+import ScrollToTop from './components/ui/ScrollToTop';
+import PageTransition from './components/ui/PageTransition';
 
 // Pages
 import HomePage from './pages/HomePage';
@@ -18,6 +21,53 @@ import NotFoundPage from './pages/NotFoundPage';
 
 // Context
 import { UserProvider } from './context/UserContext';
+
+// AnimatedRoutes component to handle route transitions
+const AnimatedRoutes = () => {
+  const location = useLocation();
+  
+  return (
+    <AnimatePresence mode="wait">
+      <Routes location={location} key={location.pathname}>
+        <Route path="/" element={
+          <PageTransition>
+            <HomePage />
+          </PageTransition>
+        } />
+        <Route path="/category/:category" element={
+          <PageTransition>
+            <CategoryPage />
+          </PageTransition>
+        } />
+        <Route path="/resource/:id" element={
+          <PageTransition>
+            <ResourceDetailPage />
+          </PageTransition>
+        } />
+        <Route path="/favorites" element={
+          <PageTransition>
+            <FavoritesPage />
+          </PageTransition>
+        } />
+        <Route path="/profile" element={
+          <PageTransition>
+            <ProfilePage />
+          </PageTransition>
+        } />
+        <Route path="/submit" element={
+          <PageTransition>
+            <SubmitResourcePage />
+          </PageTransition>
+        } />
+        <Route path="*" element={
+          <PageTransition>
+            <NotFoundPage />
+          </PageTransition>
+        } />
+      </Routes>
+    </AnimatePresence>
+  );
+};
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -43,15 +93,7 @@ function App() {
           <Navbar onOpenAuth={() => setShowAuthModal(true)} />
           
           <main>
-            <Routes>
-              <Route path="/" element={<HomePage />} />
-              <Route path="/category/:category" element={<CategoryPage />} />
-              <Route path="/resource/:id" element={<ResourceDetailPage />} />
-              <Route path="/favorites" element={<FavoritesPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/submit" element={<SubmitResourcePage />} />
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>
+            <AnimatedRoutes />
           </main>
           
           <Footer />
@@ -60,6 +102,8 @@ function App() {
             isOpen={showAuthModal} 
             onClose={() => setShowAuthModal(false)} 
           />
+          
+          <ScrollToTop />
         </div>
       </BrowserRouter>
     </UserProvider>

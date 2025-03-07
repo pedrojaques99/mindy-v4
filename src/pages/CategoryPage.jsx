@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { motion } from 'framer-motion';
 import { supabase } from '../main';
 import SearchBar from '../components/SearchBar';
-import TagCloud from '../components/TagCloud';
+import FilterTags from '../components/FilterTags';
 import ResourceCard from '../components/ResourceCard';
 import toast from 'react-hot-toast';
 
@@ -31,7 +32,11 @@ const CategoryPage = () => {
     }
     
     if (tagParam) {
-      setSelectedTags([tagParam]);
+      // Split comma-separated tags into an array
+      const tags = tagParam.split(',').map(tag => tag.trim()).filter(Boolean);
+      setSelectedTags(tags);
+    } else {
+      setSelectedTags([]);
     }
     
     // Reset pagination when URL changes
@@ -95,25 +100,31 @@ const CategoryPage = () => {
         setHasMore(false);
       }
       
-      // Filter by tag if present in URL
+      // Filter by tags if present in URL
       const urlTagQuery = urlParams.get('tag');
       let filteredResources = resourcesData;
       
       if (urlTagQuery) {
-        filteredResources = resourcesData.filter(resource => 
-          resource.tags && resource.tags.includes(urlTagQuery)
-        );
+        const tags = urlTagQuery.split(',').map(tag => tag.trim()).filter(Boolean);
+        
+        if (tags.length > 0) {
+          filteredResources = resourcesData.filter(resource => {
+            // Check if resource has all the selected tags
+            return tags.every(tag => resource.tags && resource.tags.includes(tag));
+          });
+        }
       }
       
-      setResources(prev => [...prev, ...filteredResources]);
-      
-      // Extract all unique tags
+      // Extract all unique tags from resources
       const tags = new Set();
-      resourcesData?.forEach(resource => {
-        resource.tags?.forEach(tag => tags.add(tag));
+      resourcesData.forEach(resource => {
+        if (resource.tags && Array.isArray(resource.tags)) {
+          resource.tags.forEach(tag => tags.add(tag));
+        }
       });
-      setAllTags(prev => Array.from(new Set([...prev, ...Array.from(tags)])));
       
+      setAllTags(Array.from(tags));
+      setResources(filteredResources);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast.error('Failed to load resources');
@@ -122,153 +133,180 @@ const CategoryPage = () => {
     }
   };
   
-  const loadMore = () => {
-    setPage(prev => prev + 1);
-    fetchData();
+  const loadMore = async () => {
+    if (!hasMore || loading) return;
+    
+    const nextPage = page + 1;
+    setPage(nextPage);
+    
+    try {
+      setLoading(true);
+      
+      // Fetch next page of resources
+      let query = supabase
+        .from('resources')
+        .select('*')
+        .range(nextPage * ITEMS_PER_PAGE, (nextPage * ITEMS_PER_PAGE) + ITEMS_PER_PAGE - 1);
+      
+      // Apply category filter
+      if (category !== 'all') {
+        query = query.eq('category', category);
+      }
+      
+      // Apply search query filter if present
+      if (searchQuery) {
+        query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+      }
+      
+      const { data: newResources, error } = await query;
+      
+      if (error) throw error;
+      
+      if (newResources.length < ITEMS_PER_PAGE) {
+        setHasMore(false);
+      }
+      
+      // Filter by selected tags
+      let filteredNewResources = newResources;
+      
+      if (selectedTags.length > 0) {
+        filteredNewResources = newResources.filter(resource => {
+          // Check if resource has all the selected tags
+          return selectedTags.every(tag => resource.tags && resource.tags.includes(tag));
+        });
+      }
+      
+      // Add new resources to existing ones
+      setResources(prev => [...prev, ...filteredNewResources]);
+      
+      // Extract and add new tags
+      const newTags = new Set();
+      newResources.forEach(resource => {
+        if (resource.tags && Array.isArray(resource.tags)) {
+          resource.tags.forEach(tag => newTags.add(tag));
+        }
+      });
+      
+      setAllTags(prev => Array.from(new Set([...prev, ...Array.from(newTags)])));
+    } catch (error) {
+      console.error('Error loading more resources:', error);
+      toast.error('Failed to load more resources');
+    } finally {
+      setLoading(false);
+    }
   };
   
-  // Filter resources based on search and tags
-  const filteredResources = resources.filter(resource => {
-    // Search filter
-    const matchesSearch = searchQuery === '' || 
-      resource.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      resource.description.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    // Tags filter
-    const matchesTags = selectedTags.length === 0 || 
-      selectedTags.every(tag => resource.tags?.includes(tag));
-    
-    return matchesSearch && matchesTags;
-  });
-  
+  // Handle tag toggle
   const handleTagToggle = (tag) => {
-    setSelectedTags(prev => 
-      prev.includes(tag)
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
+    let newSelectedTags;
     
-    // Update URL with selected tag
-    const params = new URLSearchParams(location.search);
-    if (!prev.includes(tag)) {
-      params.set('tag', tag);
+    if (selectedTags.includes(tag)) {
+      // Remove tag if already selected
+      newSelectedTags = selectedTags.filter(t => t !== tag);
     } else {
-      params.delete('tag');
+      // Add tag if not already selected
+      newSelectedTags = [...selectedTags, tag];
     }
     
-    navigate(`${location.pathname}?${params.toString()}`);
+    setSelectedTags(newSelectedTags);
+    
+    // Update URL with selected tags
+    const queryParams = new URLSearchParams(location.search);
+    
+    if (newSelectedTags.length > 0) {
+      queryParams.set('tag', newSelectedTags.join(','));
+    } else {
+      queryParams.delete('tag');
+    }
+    
+    navigate(`${location.pathname}?${queryParams.toString()}`);
   };
   
+  // Handle search
   const handleSearch = (query) => {
     setSearchQuery(query);
     
     // Update URL with search query
-    const params = new URLSearchParams(location.search);
+    const queryParams = new URLSearchParams(location.search);
+    
     if (query) {
-      params.set('search', query);
+      queryParams.set('search', query);
     } else {
-      params.delete('search');
+      queryParams.delete('search');
     }
     
-    navigate(`${location.pathname}?${params.toString()}`);
+    navigate(`${location.pathname}?${queryParams.toString()}`);
   };
   
+  // Clear all filters
   const clearFilters = () => {
-    setSearchQuery('');
     setSelectedTags([]);
-    
-    // Clear URL parameters
+    setSearchQuery('');
     navigate(location.pathname);
   };
   
   return (
     <div className="container mx-auto px-4 py-8">
-      {/* Category header */}
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">
-          {category === 'all' 
-            ? 'All Resources' 
-            : categoryData?.name || 'Loading...'}
+          {category === 'all' ? 'All Resources' : categoryData?.name || category}
         </h1>
-        <p className="text-white/70">
-          {categoryData?.description || 
-            'Browse our curated collection of resources'}
+        <p className="text-gray-300">
+          {category === 'all' 
+            ? 'Browse our curated collection of resources' 
+            : categoryData?.description || `Browse our curated collection of ${category} resources`}
         </p>
       </div>
       
-      {/* Search and filters */}
-      <div className="glass-card p-6 mb-8">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <div className="md:col-span-2">
-            <SearchBar 
-              value={searchQuery}
-              onChange={handleSearch}
-              placeholder="Search resources..."
-            />
-          </div>
-          
-          <div className="flex items-center justify-end">
-            <button 
-              onClick={clearFilters}
-              className="btn btn-secondary"
-              disabled={!searchQuery && selectedTags.length === 0}
-            >
-              Clear Filters
-            </button>
-          </div>
-        </div>
-        
-        {/* Tags */}
-        <div className="mt-6">
-          <h3 className="text-sm font-medium mb-2">Filter by tags:</h3>
-          <TagCloud 
-            tags={allTags} 
-            selectedTags={selectedTags}
-            onTagClick={handleTagToggle}
+      <div className="glass-card p-4 mb-8">
+        <div className="mb-4">
+          <SearchBar 
+            onSearch={handleSearch} 
+            minimal={true}
           />
         </div>
+        
+        <FilterTags 
+          tags={allTags}
+          selectedTags={selectedTags}
+          onToggleTag={handleTagToggle}
+          onClearFilters={clearFilters}
+        />
       </div>
       
-      {/* Resources grid */}
-      {loading && resources.length === 0 ? (
-        <div className="flex justify-center py-16">
-          <div className="spinner"></div>
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-[#bfff58]"></div>
         </div>
-      ) : filteredResources.length > 0 ? (
+      ) : resources.length > 0 ? (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredResources.map(resource => (
-              <ResourceCard key={resource.id} resource={resource} />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {resources.map((resource, index) => (
+              <ResourceCard 
+                key={resource.id} 
+                resource={resource} 
+                delay={index % 9} // Stagger animation in groups of 9
+              />
             ))}
           </div>
           
-          {hasMore && !loading && filteredResources.length === resources.length && (
-            <div className="flex justify-center mt-8">
+          {hasMore && (
+            <div className="mt-8 text-center">
               <button 
                 onClick={loadMore}
-                className="btn btn-primary"
-                disabled={loading}
+                className="px-6 py-2 bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] rounded-full text-white transition-colors"
               >
-                {loading ? 'Loading...' : 'Load More'}
+                Load More
               </button>
-            </div>
-          )}
-          
-          {loading && resources.length > 0 && (
-            <div className="flex justify-center mt-8">
-              <div className="spinner"></div>
             </div>
           )}
         </>
       ) : (
-        <div className="glass-card p-8 text-center">
-          <h2 className="text-xl font-medium mb-4">No resources found</h2>
-          <p className="text-white/70 mb-6">
-            Try adjusting your search or filters to find what you're looking for.
-          </p>
+        <div className="text-center py-12">
+          <p className="text-gray-400 mb-4">No resources found matching your criteria.</p>
           <button 
             onClick={clearFilters}
-            className="btn btn-primary"
+            className="px-4 py-2 bg-[rgba(255,255,255,0.05)] hover:bg-[rgba(255,255,255,0.1)] rounded-full text-white text-sm transition-colors"
           >
             Clear Filters
           </button>
