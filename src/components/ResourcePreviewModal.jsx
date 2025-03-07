@@ -31,12 +31,27 @@ export default function ResourcePreviewModal({ resource, isOpen, onClose, initia
   const [comments, setComments] = useState([]);
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   
+  // Set active tab when initialTab prop changes
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
+  
   // Fetch comments when the modal opens or when switching to comments tab
   useEffect(() => {
     if (isOpen && resource?.id && activeTab === 'comments') {
       fetchComments();
     }
   }, [isOpen, resource?.id, activeTab]);
+  
+  // Don't disable scrolling on the main page
+  useEffect(() => {
+    // No need to modify document body style
+    return () => {
+      // No cleanup needed
+    };
+  }, [isOpen]);
   
   // Fetch comments for the resource
   const fetchComments = async () => {
@@ -147,28 +162,36 @@ export default function ResourcePreviewModal({ resource, isOpen, onClose, initia
     return softwareNames.some(software => tag.toLowerCase().includes(software));
   };
   
+  // Handle tab change
+  const handleTabChange = (tab) => {
+    setActiveTab(tab);
+    if (tab === 'comments' && comments.length === 0) {
+      fetchComments();
+    }
+  };
+  
   if (!resource) return null;
   
   return (
     <AnimatePresence>
       {isOpen && (
         <>
-          {/* Backdrop */}
+          {/* Semi-transparent backdrop that allows interaction with underlying content */}
           <motion.div
-            className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm"
+            className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm pointer-events-none"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            onClick={onClose}
           />
           
-          {/* Slide-in drawer */}
+          {/* Slide-in drawer with fixed position and height */}
           <motion.div
-            className="fixed right-0 top-0 bottom-0 z-50 w-full sm:w-3/4 md:w-2/3 lg:w-1/2 bg-dark-200 shadow-xl overflow-hidden flex flex-col"
+            className="fixed right-0 top-1/2 -translate-y-1/2 z-50 w-full sm:w-3/4 md:w-2/3 lg:w-1/2 h-[80vh] bg-dark-200 shadow-xl overflow-hidden flex flex-col rounded-l-xl"
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 30, stiffness: 300 }}
+            onClick={(e) => e.stopPropagation()}
           >
             {/* Header */}
             <div className="flex justify-between items-center p-4 border-b border-dark-300">
@@ -259,7 +282,7 @@ export default function ResourcePreviewModal({ resource, isOpen, onClose, initia
                       ? 'text-lime-accent border-b-2 border-lime-accent' 
                       : 'text-gray-400 hover:text-white'
                   }`}
-                  onClick={() => setActiveTab('details')}
+                  onClick={() => handleTabChange('details')}
                 >
                   Details
                 </button>
@@ -269,7 +292,7 @@ export default function ResourcePreviewModal({ resource, isOpen, onClose, initia
                       ? 'text-lime-accent border-b-2 border-lime-accent' 
                       : 'text-gray-400 hover:text-white'
                   }`}
-                  onClick={() => setActiveTab('comments')}
+                  onClick={() => handleTabChange('comments')}
                 >
                   Comments ({comments.length})
                 </button>

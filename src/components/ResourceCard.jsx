@@ -21,6 +21,7 @@ export default function ResourceCard({ resource, delay = 0 }) {
   const [faviconUrl, setFaviconUrl] = useState(null);
   const [commentCount, setCommentCount] = useState(0);
   const [showPreview, setShowPreview] = useState(false);
+  const [activeTab, setActiveTab] = useState('details');
   
   // Fetch website thumbnail and favicon when component mounts
   useEffect(() => {
@@ -64,16 +65,20 @@ export default function ResourceCard({ resource, delay = 0 }) {
   const trackView = async () => {
     if (!user) return;
     
-    await supabase
-      .from('resource_views')
-      .insert([
-        { resource_id: resource.id, user_id: user.id }
-      ]);
-      
-    // Update popularity
-    await supabase
-      .rpc('increment_popularity', { resource_id: resource.id })
-      .catch(error => console.error('Error incrementing popularity:', error));
+    try {
+      await supabase
+        .from('resource_views')
+        .insert([
+          { resource_id: resource.id, user_id: user.id }
+        ]);
+        
+      // Update popularity
+      await supabase
+        .rpc('increment_popularity', { resource_id: resource.id })
+        .catch(error => console.error('Error incrementing popularity:', error));
+    } catch (error) {
+      console.error('Error tracking view:', error);
+    }
   };
   
   // Toggle favorite
@@ -88,33 +93,38 @@ export default function ResourceCard({ resource, delay = 0 }) {
     
     setIsLoading(true);
     
-    if (isFavorited) {
-      // Remove from favorites
-      const { error } = await supabase
-        .from('favorites')
-        .delete()
-        .eq('user_id', user.id)
-        .eq('resource_id', resource.id);
-        
-      if (!error) {
-        setIsFavorited(false);
-        toast('Removed from favorites', { icon: '💔' });
+    try {
+      if (isFavorited) {
+        // Remove from favorites
+        const { error } = await supabase
+          .from('favorites')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('resource_id', resource.id);
+          
+        if (!error) {
+          setIsFavorited(false);
+          toast('Removed from favorites', { icon: '💔' });
+        }
+      } else {
+        // Add to favorites
+        const { error } = await supabase
+          .from('favorites')
+          .insert([
+            { user_id: user.id, resource_id: resource.id }
+          ]);
+          
+        if (!error) {
+          setIsFavorited(true);
+          toast('Added to favorites', { icon: '❤️' });
+        }
       }
-    } else {
-      // Add to favorites
-      const { error } = await supabase
-        .from('favorites')
-        .insert([
-          { user_id: user.id, resource_id: resource.id }
-        ]);
-        
-      if (!error) {
-        setIsFavorited(true);
-        toast('Added to favorites', { icon: '❤️' });
-      }
+    } catch (error) {
+      console.error('Error toggling favorite:', error);
+      toast.error('Failed to update favorites');
+    } finally {
+      setIsLoading(false);
     }
-    
-    setIsLoading(false);
   };
   
   // Share resource
@@ -148,14 +158,26 @@ export default function ResourceCard({ resource, delay = 0 }) {
   };
   
   // Handle card click
-  const handleCardClick = (e) => {
-    // If the click is on a button or link, don't open the preview
-    if (e.target.closest('button') || e.target.closest('a')) return;
+  const handleCardClick = () => {
+    console.log('ResourceCard clicked, opening preview modal');
+    // Track view
+    trackView();
+    
+    // Show preview modal with details tab
+    setActiveTab('details');
+    setShowPreview(true);
+  };
+  
+  // Handle comments click
+  const handleCommentsClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
     
     // Track view
     trackView();
     
-    // Show preview modal
+    // Show preview modal with comments tab
+    setActiveTab('comments');
     setShowPreview(true);
   };
   
@@ -196,120 +218,119 @@ export default function ResourceCard({ resource, delay = 0 }) {
         style={{ animationDelay: `${delay * 0.1}s` }}
       >
         <GlassCard 
-          onClick={handleCardClick}
           className="relative overflow-hidden transition-all duration-300 cursor-pointer h-full"
         >
-          {/* Spotlight effect */}
-          <div className="spotlight" style={{ '--x': '50%', '--y': '50%' }}></div>
-          
-          {/* Resource Image */}
-          <div className="relative aspect-video overflow-hidden rounded-t-xl bg-dark-300/50">
-            <AutoThumbnail 
-              src={thumbnailUrl} 
-              alt={resource.title}
-              url={resource.url}
-              onError={handleImageError}
-              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
-            />
+          <div 
+            className="h-full w-full"
+            onClick={handleCardClick}
+          >
+            {/* Spotlight effect */}
+            <div className="spotlight" style={{ '--x': '50%', '--y': '50%' }}></div>
             
-            {/* Favicon */}
-            {faviconUrl && (
-              <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-dark-100/80 backdrop-blur-sm p-1 shadow-lg">
-                <img 
-                  src={faviconUrl} 
-                  alt="Site icon" 
-                  className="w-full h-full object-contain"
-                  onError={(e) => e.target.style.display = 'none'}
-                />
+            {/* Resource Image */}
+            <div className="relative aspect-video overflow-hidden rounded-t-xl bg-dark-300/50">
+              <AutoThumbnail 
+                src={thumbnailUrl} 
+                alt={resource.title}
+                url={resource.url}
+                onError={handleImageError}
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+              />
+              
+              {/* Favicon */}
+              {faviconUrl && (
+                <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-dark-100/80 backdrop-blur-sm p-1 shadow-lg">
+                  <img 
+                    src={faviconUrl} 
+                    alt="Site icon" 
+                    className="w-full h-full object-contain"
+                    onError={(e) => e.target.style.display = 'none'}
+                  />
+                </div>
+              )}
+              
+              {/* Actions */}
+              <div className="absolute top-2 right-2 flex space-x-1">
+                <button 
+                  onClick={toggleFavorite}
+                  disabled={isLoading}
+                  className="p-1.5 rounded-full bg-dark-100/70 backdrop-blur-sm text-white/80 hover:text-lime-accent transition-colors duration-200"
+                  aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                >
+                  {isFavorited ? (
+                    <HeartSolidIcon className="w-4 h-4 text-lime-accent" />
+                  ) : (
+                    <HeartIcon className="w-4 h-4" />
+                  )}
+                </button>
+                
+                <button 
+                  onClick={shareResource}
+                  className="p-1.5 rounded-full bg-dark-100/70 backdrop-blur-sm text-white/80 hover:text-lime-accent transition-colors duration-200"
+                  aria-label="Share resource"
+                >
+                  <ShareIcon className="w-4 h-4" />
+                </button>
+                
+                <button 
+                  onClick={openExternalUrl}
+                  className="p-1.5 rounded-full bg-dark-100/70 backdrop-blur-sm text-white/80 hover:text-lime-accent transition-colors duration-200"
+                  aria-label="Open external link"
+                >
+                  <ExternalLinkIcon className="w-4 h-4" />
+                </button>
               </div>
-            )}
-            
-            {/* Actions */}
-            <div className="absolute top-2 right-2 flex space-x-1">
-              <button 
-                onClick={toggleFavorite}
-                disabled={isLoading}
-                className="p-1.5 rounded-full bg-dark-100/70 backdrop-blur-sm text-white/80 hover:text-lime-accent transition-colors duration-200"
-                aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-              >
-                {isFavorited ? (
-                  <HeartSolidIcon className="w-4 h-4 text-lime-accent" />
-                ) : (
-                  <HeartIcon className="w-4 h-4" />
-                )}
-              </button>
-              
-              <button 
-                onClick={shareResource}
-                className="p-1.5 rounded-full bg-dark-100/70 backdrop-blur-sm text-white/80 hover:text-lime-accent transition-colors duration-200"
-                aria-label="Share resource"
-              >
-                <ShareIcon className="w-4 h-4" />
-              </button>
-              
-              <button 
-                onClick={openExternalUrl}
-                className="p-1.5 rounded-full bg-dark-100/70 backdrop-blur-sm text-white/80 hover:text-lime-accent transition-colors duration-200"
-                aria-label="Open external link"
-              >
-                <ExternalLinkIcon className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-          
-          {/* Content */}
-          <div className="p-4">
-            <div className="flex items-start justify-between">
-              <h3 className="text-lg font-medium text-white group-hover:text-lime-accent transition-colors duration-200 line-clamp-2">
-                {resource.title}
-              </h3>
             </div>
             
-            <p className="mt-1 text-sm text-white/60 line-clamp-2">
-              {resource.description}
-            </p>
-            
-            {/* Tags */}
-            {resource.tags && resource.tags.length > 0 && (
-              <div className="mt-3 flex flex-wrap gap-1">
-                {resource.tags.slice(0, 3).map((tag, index) => (
-                  <button 
-                    key={index} 
-                    className="tag hover:bg-glass-200 transition-colors"
-                    onClick={(e) => handleTagClick(e, tag)}
-                  >
-                    {tag.includes(':') ? (
-                      <SoftwareIcon name={tag.split(':')[1]} className="mr-1" />
-                    ) : null}
-                    {tag.includes(':') ? tag.split(':')[1] : tag}
-                  </button>
-                ))}
-                {resource.tags.length > 3 && (
-                  <span className="tag">+{resource.tags.length - 3}</span>
-                )}
+            {/* Content */}
+            <div className="p-4">
+              <div className="flex items-start justify-between">
+                <h3 className="text-lg font-medium text-white group-hover:text-lime-accent transition-colors duration-200 line-clamp-2">
+                  {resource.title}
+                </h3>
               </div>
-            )}
-            
-            {/* Footer */}
-            <div className="mt-3 flex items-center justify-between text-xs text-white/50">
-              <button 
-                className="flex items-center hover:text-white transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowPreview(true);
-                  // Set active tab to comments in the modal
-                  // This will be handled in the modal component
-                }}
-              >
-                <ChatAltIcon className="w-3.5 h-3.5 mr-1" />
-                <span>{commentCount} comment{commentCount !== 1 ? 's' : ''}</span>
-              </button>
               
-              <div className="flex items-center">
-                <ExternalLinkIcon className="w-3.5 h-3.5 mr-1" />
-                <span className="truncate max-w-[120px]">
-                  {resource.url ? new URL(resource.url).hostname.replace('www.', '') : 'No URL'}
-                </span>
+              <p className="mt-1 text-sm text-white/60 line-clamp-2">
+                {resource.description}
+              </p>
+              
+              {/* Tags */}
+              {resource.tags && resource.tags.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {resource.tags.slice(0, 3).map((tag, index) => (
+                    <button 
+                      key={index} 
+                      className="tag hover:bg-glass-200 transition-colors"
+                      onClick={(e) => handleTagClick(e, tag)}
+                    >
+                      {tag.includes(':') ? (
+                        <SoftwareIcon name={tag.split(':')[1]} className="mr-1" />
+                      ) : null}
+                      {tag.includes(':') ? tag.split(':')[1] : tag}
+                    </button>
+                  ))}
+                  {resource.tags.length > 3 && (
+                    <span className="tag">+{resource.tags.length - 3}</span>
+                  )}
+                </div>
+              )}
+              
+              {/* Footer */}
+              <div className="mt-3 flex items-center justify-between text-xs text-white/50">
+                <button 
+                  className="flex items-center hover:text-white transition-colors"
+                  onClick={handleCommentsClick}
+                >
+                  <ChatAltIcon className="w-3.5 h-3.5 mr-1" />
+                  <span>{commentCount} comment{commentCount !== 1 ? 's' : ''}</span>
+                </button>
+                
+                <div className="flex items-center">
+                  <ExternalLinkIcon className="w-3.5 h-3.5 mr-1" />
+                  <span className="truncate max-w-[120px]">
+                    {resource.url ? new URL(resource.url).hostname.replace('www.', '') : 'No URL'}
+                  </span>
+                </div>
               </div>
             </div>
           </div>
@@ -322,7 +343,7 @@ export default function ResourceCard({ resource, delay = 0 }) {
           resource={resource}
           isOpen={showPreview}
           onClose={() => setShowPreview(false)}
-          initialTab="details"
+          initialTab={activeTab}
         />
       )}
     </>
