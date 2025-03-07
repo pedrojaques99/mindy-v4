@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { useParams, useLocation, useNavigate, useOutletContext } from 'react-router-dom';
+import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { supabase } from '../supabaseClient';
+import { supabase } from '../main';
 import SearchBar from '../components/SearchBar';
 import FilterTags from '../components/FilterTags';
 import ResourceCard from '../components/ResourceCard';
@@ -11,10 +11,6 @@ const CategoryPage = () => {
   const { category } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  // Add default empty object to prevent destructuring errors
-  const context = useOutletContext() || {};
-  const { session, handleResourcePreview } = context;
-  
   const [categoryData, setCategoryData] = useState(null);
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
