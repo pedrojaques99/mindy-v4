@@ -22,21 +22,49 @@ const HomePage = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch featured resources
+        // Fetch featured resources with engagement metrics
         const { data: resources, error: resourcesError } = await supabase
           .from('resources')
-          .select('*')
+          .select(`
+            *,
+            resource_views(count),
+            favorites(count),
+            resource_comments(count)
+          `)
           .eq('featured', true)
           .order('popularity', { ascending: false })
-          .limit(7);
+          .limit(10);
 
         if (resourcesError) throw resourcesError;
         
         if (resources && resources.length > 0) {
+          // Calculate engagement score for each resource
+          const resourcesWithEngagement = resources.map(resource => {
+            const viewCount = resource.resource_views?.length || 0;
+            const favoriteCount = resource.favorites?.length || 0;
+            const commentCount = resource.resource_comments?.length || 0;
+            
+            // Calculate engagement score (customize weights as needed)
+            const engagementScore = 
+              (viewCount * 1) + 
+              (favoriteCount * 3) + 
+              (commentCount * 5) + 
+              (resource.popularity || 0);
+              
+            return {
+              ...resource,
+              engagementScore
+            };
+          });
+          
+          // Sort by engagement score
+          resourcesWithEngagement.sort((a, b) => b.engagementScore - a.engagementScore);
+          
           // Set the first resource as the main featured one
-          setMainFeatured(resources[0]);
+          setMainFeatured(resourcesWithEngagement[0]);
+          
           // Set the rest as regular featured resources
-          setFeaturedResources(resources.slice(1) || []);
+          setFeaturedResources(resourcesWithEngagement.slice(1) || []);
         }
 
         // Get unique categories from resources table
@@ -257,16 +285,43 @@ const HomePage = () => {
       {/* Main Featured Resource */}
       {displayMainFeatured && (
         <motion.section 
-          className="mb-16"
+          className="mb-12"
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6, delay: 0.2 }}
         >
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold">Featured Resource</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-medium text-white/90">Featured Resources</h2>
+            <Link 
+              to="/category/all?featured=true" 
+              className="text-lime-accent flex items-center text-xs hover:underline"
+            >
+              View all
+              <ArrowRightIcon className="w-3 h-3 ml-0.5" />
+            </Link>
           </div>
           
-          <FeaturedResource resource={displayMainFeatured} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="md:col-span-2">
+              <FeaturedResource resource={displayMainFeatured} />
+            </div>
+            
+            {featuredResources.length > 0 && (
+              <div className="grid grid-cols-1 gap-4">
+                {featuredResources.slice(0, 2).map((resource, index) => (
+                  <FeaturedResource key={resource.id} resource={resource} />
+                ))}
+              </div>
+            )}
+          </div>
+          
+          {featuredResources.length > 2 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+              {featuredResources.slice(2, 5).map((resource, index) => (
+                <FeaturedResource key={resource.id} resource={resource} />
+              ))}
+            </div>
+          )}
         </motion.section>
       )}
 

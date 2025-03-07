@@ -166,7 +166,18 @@ const ResourceDetailPage = () => {
   // Check if a tag is a software name
   const isSoftwareTag = (tag) => {
     const softwareNames = ['figma', 'photoshop', 'illustrator', 'sketch', 'adobe', 'react', 'cursor', 'vscode'];
-    return softwareNames.includes(tag.toLowerCase());
+    return softwareNames.some(software => tag.toLowerCase().includes(software));
+  };
+  
+  // Get the category slug for navigation
+  const getCategorySlug = () => {
+    // If we have a category object with a slug, use that
+    if (category && category.slug) {
+      return category.slug;
+    }
+    
+    // Otherwise, use the resource's category field or default to 'all'
+    return resource?.category || 'all';
   };
   
   if (loading) {
@@ -194,25 +205,31 @@ const ResourceDetailPage = () => {
       <div className="container mx-auto px-4 py-8">
         <div className="mb-8">
           <Link 
-            to={`/category/${resource.category}`}
+            to={`/category/${getCategorySlug()}`}
             className="inline-flex items-center text-gray-400 hover:text-white mb-4"
           >
             <ArrowLeftIcon className="w-4 h-4 mr-1" />
-            Back to {category?.name || resource.category}
+            Back to {category?.name || resource.category || 'All Resources'}
           </Link>
           
           <h1 className="text-3xl font-bold mb-2">{resource.title}</h1>
           
           <div className="flex flex-wrap gap-2 mb-4">
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-lime-accent/20 text-lime-accent">
+            <Link 
+              to={`/category/${getCategorySlug()}`}
+              className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-lime-accent/20 text-lime-accent hover:bg-lime-accent/30 transition-colors"
+            >
               <TagIcon className="w-4 h-4 mr-1" />
-              {resource.category}
-            </span>
+              {category?.name || resource.category || 'All Resources'}
+            </Link>
             
             {resource.subcategory && (
-              <span className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-glass-100 text-white">
+              <Link
+                to={`/category/${getCategorySlug()}?subcategory=${resource.subcategory}`}
+                className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-glass-100 text-white hover:bg-glass-200 transition-colors"
+              >
                 {resource.subcategory}
-              </span>
+              </Link>
             )}
           </div>
           
@@ -269,7 +286,7 @@ const ResourceDetailPage = () => {
                 {resource.tags.map(tag => (
                   <Link
                     key={tag}
-                    to={`/category/all?tag=${tag}`}
+                    to={`/category/${getCategorySlug()}?tag=${tag}`}
                     className="inline-flex items-center px-3 py-1.5 rounded-full bg-glass-100 text-white hover:bg-glass-300 transition-colors"
                   >
                     {isSoftwareTag(tag) ? (
