@@ -19,7 +19,13 @@ export const getWebsiteThumbnail = (url, options = {}) => {
     fallbackToScreenshot = true 
   } = options;
   
-  // Clean the URL
+  // Ensure URL has a protocol
+  let fullUrl = url;
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    fullUrl = `https://${url}`;
+  }
+  
+  // Clean the URL for display (not for API calls)
   let cleanUrl = url;
   try {
     // Remove protocol and trailing slashes for cleaner URLs
@@ -37,13 +43,24 @@ export const getWebsiteThumbnail = (url, options = {}) => {
   
   const { width, height } = sizes[size] || sizes.medium;
   
-  // Try to use Microlink API first (high quality, supports most sites)
   try {
-    return `https://api.microlink.io/?url=${encodeURIComponent(url)}&screenshot=true&meta=false&embed=screenshot.url`;
+    // Always use encodeURIComponent for the full URL to ensure special characters are properly encoded
+    const encodedUrl = encodeURIComponent(fullUrl);
+    
+    // Try to use Microlink API first (high quality, supports most sites)
+    return `https://api.microlink.io/?url=${encodedUrl}&screenshot=true&meta=false&embed=screenshot.url`;
   } catch (error) {
+    console.error('Error generating Microlink URL:', error);
+    
     // Fallback to screenshot service if needed
     if (fallbackToScreenshot) {
-      return `https://api.apiflash.com/v1/urltoimage?access_key=free&url=${encodeURIComponent(url)}&width=${width}&height=${height}&response_type=image`;
+      try {
+        const encodedUrl = encodeURIComponent(fullUrl);
+        return `https://api.apiflash.com/v1/urltoimage?access_key=free&url=${encodedUrl}&width=${width}&height=${height}&response_type=image`;
+      } catch (fallbackError) {
+        console.error('Error generating fallback screenshot URL:', fallbackError);
+        return null;
+      }
     }
     return null;
   }
@@ -59,11 +76,25 @@ export const getWebsiteFavicon = (url) => {
   if (!url) return null;
   
   try {
+    // Ensure URL has a protocol for proper URL parsing
+    let fullUrl = url;
+    if (!url.startsWith('http://') && !url.startsWith('https://')) {
+      fullUrl = `https://${url}`;
+    }
+    
     // Extract domain from URL
-    const domain = new URL(url).hostname;
-    return `https://www.google.com/s2/favicons?domain=${domain}&sz=64`;
+    const domain = new URL(fullUrl).hostname;
+    return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(domain)}&sz=64`;
   } catch (error) {
     console.error('Error getting favicon:', error);
-    return null;
+    
+    // Try a simpler fallback method for the domain
+    try {
+      // Just use the raw URL as the domain, might work in some cases
+      return `https://www.google.com/s2/favicons?domain=${encodeURIComponent(url)}&sz=64`;
+    } catch (fallbackError) {
+      console.error('Error in favicon fallback:', fallbackError);
+      return null;
+    }
   }
 }; 

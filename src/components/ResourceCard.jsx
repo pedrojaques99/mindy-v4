@@ -205,15 +205,23 @@ export default function ResourceCard({ resource, delay = 0 }) {
   useEffect(() => {
     if (!resource.image_url && resource.url) {
       // Get website thumbnail
-      const thumbnail = getWebsiteThumbnail(resource.url, { size: 'medium' });
-      if (thumbnail) {
-        setThumbnailUrl(thumbnail);
+      try {
+        const thumbnail = getWebsiteThumbnail(resource.url, { size: 'medium' });
+        if (thumbnail) {
+          setThumbnailUrl(thumbnail);
+        }
+      } catch (error) {
+        console.error('Error getting website thumbnail:', error);
       }
       
       // Get website favicon
-      const favicon = getWebsiteFavicon(resource.url);
-      if (favicon) {
-        setFaviconUrl(favicon);
+      try {
+        const favicon = getWebsiteFavicon(resource.url);
+        if (favicon) {
+          setFaviconUrl(favicon);
+        }
+      } catch (error) {
+        console.error('Error getting website favicon:', error);
       }
     }
   }, [resource.url, resource.image_url, resource.id]);
@@ -240,6 +248,10 @@ export default function ResourceCard({ resource, delay = 0 }) {
                 src={thumbnailUrl} 
                 alt={resource.title}
                 url={resource.url}
+                title={resource.title}
+                category={resource.category}
+                subcategory={resource.subcategory}
+                tags={resource.tags}
                 onError={handleImageError}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
