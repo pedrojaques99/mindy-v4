@@ -1,12 +1,38 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { ExternalLinkIcon } from '@heroicons/react/outline';
 import AutoThumbnail from './ui/AutoThumbnail';
+import { getResourceThumbnails } from '../utils/thumbnailUtils';
 
 export default function RelatedResources({ resources }) {
   if (!resources || resources.length === 0) {
     return null;
   }
+  
+  // Set up a map to hold thumbnails for each resource
+  const [thumbnails, setThumbnails] = useState({});
+  
+  // Generate thumbnails for all related resources when the component mounts
+  useEffect(() => {
+    const resourceThumbnails = {};
+    
+    resources.forEach(resource => {
+      if (!resource.image_url) {
+        const { thumbnailUrl } = getResourceThumbnails(resource);
+        resourceThumbnails[resource.id] = thumbnailUrl;
+      }
+    });
+    
+    setThumbnails(resourceThumbnails);
+  }, [resources]);
+  
+  // Handle thumbnail errors
+  const handleThumbnailError = (resourceId) => {
+    setThumbnails(prev => ({
+      ...prev,
+      [resourceId]: null
+    }));
+  };
   
   return (
     <div className="space-y-4">
@@ -27,10 +53,15 @@ export default function RelatedResources({ resources }) {
                 />
               ) : (
                 <AutoThumbnail 
+                  src={thumbnails[resource.id] || null}
+                  alt={resource.title}
                   url={resource.url}
                   title={resource.title}
-                  category={resource.category}
+                  category={resource.category || ''}
+                  subcategory={resource.subcategory || ''}
+                  tags={resource.tags || []}
                   className="w-full h-full"
+                  onError={() => handleThumbnailError(resource.id)}
                 />
               )}
             </div>

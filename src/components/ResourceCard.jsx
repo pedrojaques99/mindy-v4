@@ -186,6 +186,12 @@ export default function ResourceCard({ resource, delay = 0 }) {
   const handleImageError = () => {
     setImageError(true);
     setImageLoaded(true);
+    
+    // Clear the thumbnailUrl on error to ensure we fall back to the generated thumbnail
+    if (thumbnailUrl) {
+      console.log(`Thumbnail error for resource: ${resource.title}`);
+      setThumbnailUrl(null);
+    }
   };
   
   if (!resource) return null;
@@ -249,9 +255,9 @@ export default function ResourceCard({ resource, delay = 0 }) {
                 alt={resource.title}
                 url={resource.url}
                 title={resource.title}
-                category={resource.category}
-                subcategory={resource.subcategory}
-                tags={resource.tags}
+                category={resource.category || ''}
+                subcategory={resource.subcategory || ''}
+                tags={resource.tags || []}
                 onError={handleImageError}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />

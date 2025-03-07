@@ -97,4 +97,50 @@ export const getWebsiteFavicon = (url) => {
       return null;
     }
   }
+};
+
+/**
+ * Safely get both thumbnail and favicon for a resource with error handling
+ * Can be used across the app to consistently handle resource thumbnails
+ * 
+ * @param {Object} resource - The resource object
+ * @param {string} resource.url - URL of the resource 
+ * @param {string} resource.image_url - Optional direct image URL
+ * @param {Object} options - Options for thumbnail generation
+ * @param {string} options.size - Size of the thumbnail (small, medium, large)
+ * @returns {Object} - Object with thumbnail and favicon URLs
+ */
+export const getResourceThumbnails = (resource, options = {}) => {
+  if (!resource) {
+    return { thumbnailUrl: null, faviconUrl: null };
+  }
+  
+  // For safety, clone the options to avoid mutating the original
+  const thumbnailOptions = { ...options };
+  
+  try {
+    // If resource already has an image, use it
+    if (resource.image_url) {
+      return { 
+        thumbnailUrl: resource.image_url,
+        faviconUrl: resource.url ? getWebsiteFavicon(resource.url) : null
+      };
+    }
+    
+    // No image and no URL - can't generate thumbnails
+    if (!resource.url) {
+      return { thumbnailUrl: null, faviconUrl: null };
+    }
+    
+    // Get website thumbnail
+    const thumbnailUrl = getWebsiteThumbnail(resource.url, thumbnailOptions);
+    
+    // Get website favicon
+    const faviconUrl = getWebsiteFavicon(resource.url);
+    
+    return { thumbnailUrl, faviconUrl };
+  } catch (error) {
+    console.error('Error getting resource thumbnails:', error, resource);
+    return { thumbnailUrl: null, faviconUrl: null };
+  }
 }; 

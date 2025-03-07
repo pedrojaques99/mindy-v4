@@ -20,6 +20,7 @@ import CommentSection from '../components/CommentSection';
 import RelatedResources from '../components/RelatedResources';
 import toast from 'react-hot-toast';
 import { Helmet } from 'react-helmet-async';
+import { getResourceThumbnails } from '../utils/thumbnailUtils';
 
 export default function ResourcePage() {
   const { id } = useParams();
@@ -34,6 +35,8 @@ export default function ResourcePage() {
   const [isLoadingComments, setIsLoadingComments] = useState(false);
   const [activeTab, setActiveTab] = useState('details');
   const [relatedResources, setRelatedResources] = useState([]);
+  const [thumbnailUrl, setThumbnailUrl] = useState(null);
+  const [faviconUrl, setFaviconUrl] = useState(null);
   
   // Parse query parameters
   useEffect(() => {
@@ -60,6 +63,11 @@ export default function ResourcePage() {
         
         if (data) {
           setResource(data);
+          
+          // Get thumbnail and favicon
+          const { thumbnailUrl: thumbUrl, faviconUrl: favUrl } = getResourceThumbnails(data);
+          setThumbnailUrl(thumbUrl);
+          setFaviconUrl(favUrl);
           
           // Track view
           if (user) {
@@ -325,10 +333,18 @@ export default function ResourcePage() {
                   />
                 ) : (
                   <AutoThumbnail 
+                    src={thumbnailUrl}
+                    alt={resource.title}
                     url={resource.url}
                     title={resource.title}
-                    category={resource.category}
-                    className="w-full h-full"
+                    category={resource.category || ''}
+                    subcategory={resource.subcategory || ''}
+                    tags={resource.tags || []}
+                    className="w-full h-full object-cover"
+                    onError={(e) => {
+                      console.error('Thumbnail error in ResourcePage:', e);
+                      setThumbnailUrl(null);
+                    }}
                   />
                 )}
                 

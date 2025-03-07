@@ -205,7 +205,7 @@ export default function AutoThumbnail({
       <img 
         src={src} 
         alt={alt || title || 'Resource thumbnail'} 
-        className={className}
+        className={className || 'w-full h-full object-cover'}
         onError={handleImageError} 
       />
     );
