@@ -8,7 +8,10 @@ import FilterTags from '../components/FilterTags';
 import { motion } from 'framer-motion';
 
 const HomePage = () => {
-  const { session, handleResourcePreview } = useOutletContext();
+  // Add default empty object to prevent destructuring errors
+  const context = useOutletContext() || {};
+  const { session, handleResourcePreview } = context;
+  
   const [resources, setResources] = useState([]);
   const [featuredResources, setFeaturedResources] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -30,7 +33,7 @@ const HomePage = () => {
           .order('name');
           
         if (categoriesError) throw categoriesError;
-        setCategories(categoriesData);
+        setCategories(categoriesData || []);
         
         // Fetch resources
         let query = supabase
@@ -54,21 +57,23 @@ const HomePage = () => {
         
         // Extract all unique tags
         const allTags = resourcesData
-          .flatMap(resource => resource.tags || [])
-          .filter((tag, index, self) => self.indexOf(tag) === index);
+          ? resourcesData
+              .flatMap(resource => resource.tags || [])
+              .filter((tag, index, self) => self.indexOf(tag) === index)
+          : [];
           
         setAvailableTags(allTags);
         
         // Filter by selected tags if any
-        let filteredResources = resourcesData;
+        let filteredResources = resourcesData || [];
         if (selectedTags.length > 0) {
-          filteredResources = resourcesData.filter(resource => 
+          filteredResources = filteredResources.filter(resource => 
             resource.tags && selectedTags.every(tag => resource.tags.includes(tag))
           );
         }
         
         // Get featured resources (top 5 with highest upvotes)
-        const featured = [...resourcesData]
+        const featured = [...(resourcesData || [])]
           .sort((a, b) => (b.upvotes || 0) - (a.upvotes || 0))
           .slice(0, 5);
           
@@ -83,6 +88,17 @@ const HomePage = () => {
     
     fetchData();
   }, [selectedCategory, selectedTags]);
+  
+  // Handle resource click when handleResourcePreview is not available
+  const handleResourceClick = (resource) => {
+    if (handleResourcePreview) {
+      handleResourcePreview(resource);
+    } else {
+      console.log('Resource preview handler not available', resource);
+      // Fallback behavior - could redirect to resource detail page
+      // window.location.href = `/resource/${resource.id}`;
+    }
+  };
   
   // Handle category selection
   const handleCategorySelect = (categoryId) => {
@@ -130,7 +146,7 @@ const HomePage = () => {
       {featuredResources.length > 0 && (
         <FeaturedResourceSlider 
           resources={featuredResources} 
-          onResourceClick={handleResourcePreview}
+          onResourceClick={handleResourcePreview || handleResourceClick}
         />
       )}
       
@@ -167,7 +183,7 @@ const HomePage = () => {
             <motion.div key={resource.id} variants={itemVariants}>
               <ResourceCard 
                 resource={resource} 
-                onCardClick={() => handleResourcePreview(resource)}
+                onCardClick={handleResourcePreview || handleResourceClick}
               />
             </motion.div>
           ))}
