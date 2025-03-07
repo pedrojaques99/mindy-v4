@@ -117,163 +117,175 @@ export default function ResourceCard({ resource, delay = 0 }) {
   };
   
   // Share resource
-  const shareResource = (e) => {
+  const shareResource = async (e) => {
     e.preventDefault();
     e.stopPropagation();
     
+    const shareUrl = `${window.location.origin}/resource/${resource.id}`;
+    
     if (navigator.share) {
-      navigator.share({
-        title: resource.title,
-        text: resource.description,
-        url: resource.url,
-      });
+      try {
+        await navigator.share({
+          title: resource.title,
+          text: resource.description,
+          url: shareUrl
+        });
+      } catch (error) {
+        console.error('Error sharing:', error);
+        copyToClipboard(shareUrl);
+      }
     } else {
-      // Fallback for browsers that don't support share API
-      navigator.clipboard.writeText(resource.url);
-      toast('Link copied to clipboard', { icon: '📋' });
+      copyToClipboard(shareUrl);
     }
   };
   
-  // Check if a tag is a software name
-  const isSoftwareTag = (tag) => {
-    const softwareNames = ['figma', 'photoshop', 'illustrator', 'sketch', 'adobe', 'react', 'cursor', 'vscode'];
-    return softwareNames.includes(tag.toLowerCase());
+  // Copy to clipboard
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text)
+      .then(() => toast('Link copied to clipboard', { icon: '🔗' }))
+      .catch(error => console.error('Error copying to clipboard:', error));
   };
   
-  // Open preview modal
-  const openPreview = (e) => {
-    e.preventDefault();
-    setShowPreview(true);
+  // Handle card click
+  const handleCardClick = (e) => {
+    // If the click is on a button, don't open the preview
+    if (e.target.closest('button')) return;
+    
+    // Track view
     trackView();
+    
+    // Show preview modal
+    setShowPreview(true);
+  };
+  
+  // Handle image error
+  const handleImageError = () => {
+    setImageError(true);
+    
+    // Try to get a thumbnail from the URL
+    if (resource.url) {
+      const thumbnail = getWebsiteThumbnail(resource.url, { size: 'medium' });
+      if (thumbnail) {
+        setThumbnailUrl(thumbnail);
+      }
+    }
   };
   
   return (
     <>
-      <div onClick={openPreview}>
+      <div 
+        className="group"
+        style={{ animationDelay: `${delay * 0.1}s` }}
+      >
         <GlassCard 
-          className="h-full overflow-hidden hover:border-[#bfff58]/50 transition-all duration-300 cursor-pointer"
-          hoverEffect={true}
-          delay={delay}
-          glowOnHover={true}
+          onClick={handleCardClick}
+          className="relative overflow-hidden transition-all duration-300 cursor-pointer h-full"
         >
-          <div className="relative aspect-video">
-            {thumbnailUrl && !imageError ? (
-              <img 
-                src={thumbnailUrl} 
-                alt={resource.title}
-                className="w-full h-full object-cover"
-                loading="lazy"
-                onError={() => setImageError(true)}
-              />
-            ) : (
-              <AutoThumbnail 
-                title={resource.title}
-                category={resource.category}
-                subcategory={resource.subcategory}
-                tags={resource.tags}
-                className="w-full h-full"
-              />
-            )}
+          {/* Spotlight effect */}
+          <div className="spotlight" style={{ '--x': '50%', '--y': '50%' }}></div>
+          
+          {/* Resource Image */}
+          <div className="relative aspect-video overflow-hidden rounded-t-xl bg-dark-300/50">
+            <AutoThumbnail 
+              src={thumbnailUrl} 
+              alt={resource.title}
+              url={resource.url}
+              onError={handleImageError}
+              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
+            />
             
-            {/* Favicon overlay */}
+            {/* Favicon */}
             {faviconUrl && (
-              <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-black/30 backdrop-blur-sm p-0.5">
+              <div className="absolute top-2 left-2 w-6 h-6 rounded-full bg-dark-100/80 backdrop-blur-sm p-1 shadow-lg">
                 <img 
                   src={faviconUrl} 
-                  alt="Site favicon" 
-                  className="w-full h-full object-contain rounded-full"
+                  alt="Site icon" 
+                  className="w-full h-full object-contain"
+                  onError={(e) => e.target.style.display = 'none'}
                 />
               </div>
             )}
             
-            {/* Preview overlay on hover */}
-            <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
-              <span className="px-4 py-2 rounded-full bg-lime-accent/20 text-lime-accent border border-lime-accent/30 flex items-center">
-                Preview Resource
-                <ExternalLinkIcon className="w-4 h-4 ml-1" />
-              </span>
-            </div>
-            
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-[#1a1a1a]/90 to-transparent p-3">
-              <div className="flex justify-between items-center">
-                <span className="text-xs font-medium px-2 py-1 rounded-full bg-[#bfff58]/20 text-[#bfff58]">
-                  {resource.subcategory}
-                </span>
-                
-                <div className="flex space-x-2">
-                  <button 
-                    onClick={toggleFavorite}
-                    disabled={isLoading}
-                    className="p-1.5 rounded-full bg-[#222222]/80 backdrop-blur-sm hover:bg-[#2a2a2a]/80 transition-colors"
-                  >
-                    {isFavorited ? (
-                      <HeartSolidIcon className="w-4 h-4 text-[#bfff58]" />
-                    ) : (
-                      <HeartIcon className="w-4 h-4 text-white" />
-                    )}
-                  </button>
-                  
-                  <button 
-                    onClick={shareResource}
-                    className="p-1.5 rounded-full bg-[#222222]/80 backdrop-blur-sm hover:bg-[#2a2a2a]/80 transition-colors"
-                  >
-                    <ShareIcon className="w-4 h-4 text-white" />
-                  </button>
-                </div>
-              </div>
+            {/* Actions */}
+            <div className="absolute top-2 right-2 flex space-x-1">
+              <button 
+                onClick={toggleFavorite}
+                disabled={isLoading}
+                className="p-1.5 rounded-full bg-dark-100/70 backdrop-blur-sm text-white/80 hover:text-lime-accent transition-colors duration-200"
+                aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+              >
+                {isFavorited ? (
+                  <HeartSolidIcon className="w-4 h-4 text-lime-accent" />
+                ) : (
+                  <HeartIcon className="w-4 h-4" />
+                )}
+              </button>
+              
+              <button 
+                onClick={shareResource}
+                className="p-1.5 rounded-full bg-dark-100/70 backdrop-blur-sm text-white/80 hover:text-lime-accent transition-colors duration-200"
+                aria-label="Share resource"
+              >
+                <ShareIcon className="w-4 h-4" />
+              </button>
             </div>
           </div>
           
+          {/* Content */}
           <div className="p-4">
-            <h3 className="font-bold text-lg text-white line-clamp-1 mb-1 flex items-center gap-2">
-              {resource.title}
-              <ExternalLinkIcon className="w-4 h-4 text-gray-400" />
-            </h3>
+            <div className="flex items-start justify-between">
+              <h3 className="text-lg font-medium text-white group-hover:text-lime-accent transition-colors duration-200 line-clamp-2">
+                {resource.title}
+              </h3>
+            </div>
             
-            <p className="text-gray-300 text-sm line-clamp-2 mb-3">
+            <p className="mt-1 text-sm text-white/60 line-clamp-2">
               {resource.description}
             </p>
             
-            <div className="flex justify-between items-center">
-              <div className="flex flex-wrap gap-1">
-                {resource.tags && resource.tags.slice(0, 3).map(tag => (
-                  <span 
-                    key={tag} 
-                    className="inline-flex items-center px-2 py-0.5 rounded-full bg-[rgba(255,255,255,0.05)] text-gray-300"
-                  >
-                    {isSoftwareTag(tag) ? (
-                      <SoftwareIcon name={tag} />
-                    ) : (
-                      tag
-                    )}
+            {/* Tags */}
+            {resource.tags && resource.tags.length > 0 && (
+              <div className="mt-3 flex flex-wrap gap-1">
+                {resource.tags.slice(0, 3).map((tag, index) => (
+                  <span key={index} className="tag">
+                    {tag.includes(':') ? (
+                      <SoftwareIcon name={tag.split(':')[1]} className="mr-1" />
+                    ) : null}
+                    {tag.includes(':') ? tag.split(':')[1] : tag}
                   </span>
                 ))}
-                
-                {resource.tags && resource.tags.length > 3 && (
-                  <span className="text-xs px-2 py-0.5 rounded-full bg-[rgba(255,255,255,0.05)] text-gray-300">
-                    +{resource.tags.length - 3}
-                  </span>
+                {resource.tags.length > 3 && (
+                  <span className="tag">+{resource.tags.length - 3}</span>
                 )}
               </div>
+            )}
+            
+            {/* Footer */}
+            <div className="mt-3 flex items-center justify-between text-xs text-white/50">
+              <div className="flex items-center">
+                <ChatAltIcon className="w-3.5 h-3.5 mr-1" />
+                <span>{commentCount} comment{commentCount !== 1 ? 's' : ''}</span>
+              </div>
               
-              {/* Comment count */}
-              {commentCount > 0 && (
-                <div className="flex items-center text-gray-400 text-xs">
-                  <ChatAltIcon className="w-4 h-4 mr-1" />
-                  <span>{commentCount}</span>
-                </div>
-              )}
+              <div className="flex items-center">
+                <ExternalLinkIcon className="w-3.5 h-3.5 mr-1" />
+                <span className="truncate max-w-[120px]">
+                  {resource.url ? new URL(resource.url).hostname.replace('www.', '') : 'No URL'}
+                </span>
+              </div>
             </div>
           </div>
         </GlassCard>
       </div>
       
-      {/* Preview Modal */}
-      <ResourcePreviewModal 
-        resource={resource}
-        isOpen={showPreview}
-        onClose={() => setShowPreview(false)}
-      />
+      {/* Resource Preview Modal */}
+      {showPreview && (
+        <ResourcePreviewModal
+          resource={resource}
+          isOpen={showPreview}
+          onClose={() => setShowPreview(false)}
+        />
+      )}
     </>
   );
 } 

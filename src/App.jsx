@@ -89,10 +89,10 @@ function App() {
   return (
     <UserProvider>
       <BrowserRouter>
-        <div className="app-container">
+        <div className="app-container min-h-screen flex flex-col grid-bg minimal-scrollbar">
           <Navbar onOpenAuth={() => setShowAuthModal(true)} />
           
-          <main>
+          <main className="flex-grow">
             <AnimatedRoutes />
           </main>
           
