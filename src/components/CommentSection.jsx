@@ -3,13 +3,12 @@ import { motion } from 'framer-motion';
 import { supabase } from '../main';
 import { useUser } from '../context/UserContext';
 import toast from 'react-hot-toast';
-import { ReplyIcon, TrashIcon } from '@heroicons/react/outline';
+import { TrashIcon } from '@heroicons/react/outline';
 
 export default function CommentSection({ resourceId, comments, setComments, isLoading }) {
   const { user } = useUser();
   const [newComment, setNewComment] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [replyTo, setReplyTo] = useState(null);
   
   // Add a new comment
   const addComment = async (e) => {
@@ -28,22 +27,13 @@ export default function CommentSection({ resourceId, comments, setComments, isLo
       const commentData = {
         resource_id: resourceId,
         user_id: user.id,
-        content: newComment.trim(),
-        parent_id: replyTo
+        content: newComment.trim()
       };
       
       const { data, error } = await supabase
-        .from('resource_comments')
+        .from('comments')
         .insert([commentData])
-        .select(`
-          *,
-          user:user_id (
-            id,
-            email,
-            username,
-            avatar_url
-          )
-        `);
+        .select('*');
         
       if (error) throw error;
       
@@ -51,7 +41,6 @@ export default function CommentSection({ resourceId, comments, setComments, isLo
       if (data && data.length > 0) {
         setComments(prev => [data[0], ...prev]);
         setNewComment('');
-        setReplyTo(null);
         toast.success('Comment added');
       }
     } catch (error) {
@@ -68,7 +57,7 @@ export default function CommentSection({ resourceId, comments, setComments, isLo
     
     try {
       const { error } = await supabase
-        .from('resource_comments')
+        .from('comments')
         .delete()
         .eq('id', commentId)
         .eq('user_id', user.id); // Ensure the user can only delete their own comments
@@ -116,24 +105,26 @@ export default function CommentSection({ resourceId, comments, setComments, isLo
     return colors[hash % colors.length];
   };
   
+  // Get username from user_id
+  const getUserInfo = (userId) => {
+    if (user && userId === user.id) {
+      return {
+        username: user.email?.split('@')[0] || 'You',
+        email: user.email || ''
+      };
+    }
+    
+    return {
+      username: 'User',
+      email: ''
+    };
+  };
+  
   return (
     <div className="flex flex-col h-full">
       {/* Comment form */}
       <div className="p-4 border-b border-glass-300">
         <form onSubmit={addComment} className="space-y-3">
-          {replyTo && (
-            <div className="flex justify-between items-center p-2 bg-glass-100 rounded-lg text-xs">
-              <span>Replying to comment</span>
-              <button 
-                type="button" 
-                onClick={() => setReplyTo(null)}
-                className="text-gray-400 hover:text-white"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
-          
           <textarea
             value={newComment}
             onChange={(e) => setNewComment(e.target.value)}
@@ -163,63 +154,58 @@ export default function CommentSection({ resourceId, comments, setComments, isLo
           </div>
         ) : comments.length > 0 ? (
           <div className="space-y-4">
-            {comments.map(comment => (
-              <motion.div
-                key={comment.id}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`p-3 rounded-lg ${comment.parent_id ? 'bg-glass-100 ml-6' : 'bg-dark-300'}`}
-              >
-                <div className="flex items-start space-x-3">
-                  {/* User avatar */}
-                  <div 
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
-                    style={{ backgroundColor: getAvatarColor(comment.user?.username || comment.user?.email) }}
-                  >
-                    {getUserInitials(comment.user?.username || comment.user?.email)}
-                  </div>
-                  
-                  {/* Comment content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-medium text-sm">
-                          {comment.user?.username || comment.user?.email?.split('@')[0] || 'Anonymous'}
+            {comments.map(comment => {
+              const userInfo = getUserInfo(comment.user_id);
+              
+              return (
+                <motion.div
+                  key={comment.id}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="p-3 rounded-lg bg-dark-300"
+                >
+                  <div className="flex items-start space-x-3">
+                    {/* User avatar */}
+                    <div 
+                      className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold"
+                      style={{ backgroundColor: getAvatarColor(userInfo.username) }}
+                    >
+                      {getUserInitials(userInfo.username)}
+                    </div>
+                    
+                    {/* Comment content */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-medium text-sm">
+                            {userInfo.username}
+                          </div>
+                          <div className="text-xs text-gray-400">
+                            {formatDate(comment.created_at)}
+                          </div>
                         </div>
-                        <div className="text-xs text-gray-400">
-                          {formatDate(comment.created_at)}
+                        
+                        {/* Actions */}
+                        <div className="flex space-x-2">
+                          {user && (
+                            <button
+                              onClick={() => deleteComment(comment.id)}
+                              className="text-gray-400 hover:text-red-500"
+                            >
+                              <TrashIcon className="w-4 h-4" />
+                            </button>
+                          )}
                         </div>
                       </div>
                       
-                      {/* Actions */}
-                      <div className="flex space-x-2">
-                        {user && (
-                          <button
-                            onClick={() => setReplyTo(comment.id)}
-                            className="text-gray-400 hover:text-white"
-                          >
-                            <ReplyIcon className="w-4 h-4" />
-                          </button>
-                        )}
-                        
-                        {user && user.id === comment.user_id && (
-                          <button
-                            onClick={() => deleteComment(comment.id)}
-                            className="text-gray-400 hover:text-red-500"
-                          >
-                            <TrashIcon className="w-4 h-4" />
-                          </button>
-                        )}
+                      <div className="mt-2 text-sm text-gray-300 whitespace-pre-wrap">
+                        {comment.content}
                       </div>
                     </div>
-                    
-                    <div className="mt-2 text-sm text-gray-300 whitespace-pre-wrap">
-                      {comment.content}
-                    </div>
                   </div>
-                </div>
-              </motion.div>
-            ))}
+                </motion.div>
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-8 text-gray-400">

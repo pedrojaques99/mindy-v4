@@ -8,48 +8,49 @@ import toast from 'react-hot-toast';
 import GlassCard from './ui/GlassCard';
 import AutoThumbnail from './ui/AutoThumbnail';
 import SoftwareIcon from './ui/SoftwareIcon';
-import ResourcePreviewModal from './ResourcePreviewModal';
 import { getWebsiteThumbnail, getWebsiteFavicon } from '../utils/thumbnailUtils';
 
 export default function ResourceCard({ resource, delay = 0 }) {
   const { user } = useUser();
   const navigate = useNavigate();
-  const [isFavorited, setIsFavorited] = useState(resource.favorited || false);
+  const [isFavorited, setIsFavorited] = useState(resource?.favorited || false);
   const [isLoading, setIsLoading] = useState(false);
-  const [imageError, setImageError] = useState(!resource.image_url);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageError, setImageError] = useState(false);
   const [thumbnailUrl, setThumbnailUrl] = useState(resource.image_url || null);
   const [faviconUrl, setFaviconUrl] = useState(null);
   const [commentCount, setCommentCount] = useState(0);
-  const [showPreview, setShowPreview] = useState(false);
-  const [activeTab, setActiveTab] = useState('details');
-  
-  // Fetch website thumbnail and favicon when component mounts
+
   useEffect(() => {
-    if (!resource.image_url && resource.url) {
-      // Get website thumbnail
-      const thumbnail = getWebsiteThumbnail(resource.url, { size: 'medium' });
-      if (thumbnail) {
-        setThumbnailUrl(thumbnail);
-      }
+    // Check if resource is favorited
+    if (user && resource) {
+      const checkFavorite = async () => {
+        const { data, error } = await supabase
+          .from('favorites')
+          .select()
+          .eq('user_id', user.id)
+          .eq('resource_id', resource.id)
+          .maybeSingle();
+          
+        if (!error && data) {
+          setIsFavorited(true);
+        }
+      };
       
-      // Get website favicon
-      const favicon = getWebsiteFavicon(resource.url);
-      if (favicon) {
-        setFaviconUrl(favicon);
-      }
+      checkFavorite();
     }
     
     // Fetch comment count
     fetchCommentCount();
-  }, [resource.url, resource.image_url, resource.id]);
+  }, [user, resource]);
   
   // Fetch comment count
   const fetchCommentCount = async () => {
-    if (!resource.id) return;
+    if (!resource?.id) return;
     
     try {
       const { count, error } = await supabase
-        .from('resource_comments')
+        .from('comments')
         .select('id', { count: 'exact' })
         .eq('resource_id', resource.id);
         
@@ -102,10 +103,10 @@ export default function ResourceCard({ resource, delay = 0 }) {
           .eq('user_id', user.id)
           .eq('resource_id', resource.id);
           
-        if (!error) {
-          setIsFavorited(false);
-          toast('Removed from favorites', { icon: '💔' });
-        }
+        if (error) throw error;
+        
+        setIsFavorited(false);
+        toast('Removed from favorites', { icon: '💔' });
       } else {
         // Add to favorites
         const { error } = await supabase
@@ -114,10 +115,10 @@ export default function ResourceCard({ resource, delay = 0 }) {
             { user_id: user.id, resource_id: resource.id }
           ]);
           
-        if (!error) {
-          setIsFavorited(true);
-          toast('Added to favorites', { icon: '❤️' });
-        }
+        if (error) throw error;
+        
+        setIsFavorited(true);
+        toast('Added to favorites', { icon: '❤️' });
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
@@ -139,7 +140,7 @@ export default function ResourceCard({ resource, delay = 0 }) {
         await navigator.share({
           title: resource.title,
           text: resource.description,
-          url: shareUrl
+          url: shareUrl,
         });
       } catch (error) {
         console.error('Error sharing:', error);
@@ -152,20 +153,17 @@ export default function ResourceCard({ resource, delay = 0 }) {
   
   // Copy to clipboard
   const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text)
-      .then(() => toast('Link copied to clipboard', { icon: '🔗' }))
-      .catch(error => console.error('Error copying to clipboard:', error));
+    navigator.clipboard.writeText(text);
+    toast('Link copied to clipboard', { icon: '📋' });
   };
   
   // Handle card click
   const handleCardClick = () => {
-    console.log('ResourceCard clicked, opening preview modal');
     // Track view
     trackView();
     
-    // Show preview modal with details tab
-    setActiveTab('details');
-    setShowPreview(true);
+    // Navigate to resource page
+    navigate(`/resource/${resource.id}`);
   };
   
   // Handle comments click
@@ -173,15 +171,11 @@ export default function ResourceCard({ resource, delay = 0 }) {
     e.preventDefault();
     e.stopPropagation();
     
-    // Track view
-    trackView();
-    
-    // Show preview modal with comments tab
-    setActiveTab('comments');
-    setShowPreview(true);
+    // Navigate to resource page with comments tab active
+    navigate(`/resource/${resource.id}?tab=comments`);
   };
   
-  // Navigate to tag filter
+  // Handle tag click
   const handleTagClick = (e, tag) => {
     e.preventDefault();
     e.stopPropagation();
@@ -191,25 +185,38 @@ export default function ResourceCard({ resource, delay = 0 }) {
   // Handle image error
   const handleImageError = () => {
     setImageError(true);
-    
-    // Try to get a thumbnail from the URL
-    if (resource.url) {
-      const thumbnail = getWebsiteThumbnail(resource.url, { size: 'medium' });
-      if (thumbnail) {
-        setThumbnailUrl(thumbnail);
-      }
-    }
+    setImageLoaded(true);
   };
   
-  // Open external URL
+  if (!resource) return null;
+  
+  // External URL click
   const openExternalUrl = (e) => {
     e.preventDefault();
     e.stopPropagation();
     
     if (resource.url) {
+      trackView();
       window.open(resource.url, '_blank', 'noopener,noreferrer');
     }
   };
+  
+  // Fetch website thumbnail and favicon when component mounts
+  useEffect(() => {
+    if (!resource.image_url && resource.url) {
+      // Get website thumbnail
+      const thumbnail = getWebsiteThumbnail(resource.url, { size: 'medium' });
+      if (thumbnail) {
+        setThumbnailUrl(thumbnail);
+      }
+      
+      // Get website favicon
+      const favicon = getWebsiteFavicon(resource.url);
+      if (favicon) {
+        setFaviconUrl(favicon);
+      }
+    }
+  }, [resource.url, resource.image_url, resource.id]);
   
   return (
     <>
@@ -336,16 +343,6 @@ export default function ResourceCard({ resource, delay = 0 }) {
           </div>
         </GlassCard>
       </div>
-      
-      {/* Resource Preview Modal */}
-      {showPreview && (
-        <ResourcePreviewModal
-          resource={resource}
-          isOpen={showPreview}
-          onClose={() => setShowPreview(false)}
-          initialTab={activeTab}
-        />
-      )}
     </>
   );
 } 

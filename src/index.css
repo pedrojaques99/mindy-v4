@@ -72,6 +72,9 @@
   .group:hover .spotlight {
     opacity: 1;
   }
+  
+  /* Main content adjustment when panel is open */
+  /* Removed panel-related styles */
 }
 
 @layer utilities {

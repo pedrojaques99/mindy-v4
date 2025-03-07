@@ -16,7 +16,9 @@ const CategoryPage = () => {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
+  const [selectedSubcategory, setSelectedSubcategory] = useState(null);
   const [allTags, setAllTags] = useState([]);
+  const [subcategories, setSubcategories] = useState([]);
   const [page, setPage] = useState(0);
   const [hasMore, setHasMore] = useState(true);
   const ITEMS_PER_PAGE = 12;
@@ -26,6 +28,7 @@ const CategoryPage = () => {
     const queryParams = new URLSearchParams(location.search);
     const searchParam = queryParams.get('search');
     const tagParam = queryParams.get('tag');
+    const subcategoryParam = queryParams.get('subcategory');
     
     if (searchParam) {
       setSearchQuery(searchParam);
@@ -37,6 +40,12 @@ const CategoryPage = () => {
       setSelectedTags(tags);
     } else {
       setSelectedTags([]);
+    }
+    
+    if (subcategoryParam) {
+      setSelectedSubcategory(subcategoryParam);
+    } else {
+      setSelectedSubcategory(null);
     }
     
     // Reset pagination when URL changes
@@ -92,6 +101,12 @@ const CategoryPage = () => {
         query = query.or(`title.ilike.%${urlSearchQuery}%,description.ilike.%${urlSearchQuery}%`);
       }
       
+      // Apply subcategory filter if present
+      const urlSubcategoryQuery = urlParams.get('subcategory');
+      if (urlSubcategoryQuery) {
+        query = query.eq('subcategory', urlSubcategoryQuery);
+      }
+      
       const { data: resourcesData, error: resourcesError } = await query;
       
       if (resourcesError) throw resourcesError;
@@ -123,7 +138,16 @@ const CategoryPage = () => {
         }
       });
       
+      // Extract all unique subcategories
+      const subCats = new Set();
+      resourcesData.forEach(resource => {
+        if (resource.subcategory) {
+          subCats.add(resource.subcategory);
+        }
+      });
+      
       setAllTags(Array.from(tags));
+      setSubcategories(Array.from(subCats));
       setResources(filteredResources);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -158,6 +182,11 @@ const CategoryPage = () => {
         query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
       }
       
+      // Apply subcategory filter if present
+      if (selectedSubcategory) {
+        query = query.eq('subcategory', selectedSubcategory);
+      }
+      
       const { data: newResources, error } = await query;
       
       if (error) throw error;
@@ -187,7 +216,16 @@ const CategoryPage = () => {
         }
       });
       
+      // Extract and add new subcategories
+      const newSubcats = new Set();
+      newResources.forEach(resource => {
+        if (resource.subcategory) {
+          newSubcats.add(resource.subcategory);
+        }
+      });
+      
       setAllTags(prev => Array.from(new Set([...prev, ...Array.from(newTags)])));
+      setSubcategories(prev => Array.from(new Set([...prev, ...Array.from(newSubcats)])));
     } catch (error) {
       console.error('Error loading more resources:', error);
       toast.error('Failed to load more resources');
@@ -222,6 +260,34 @@ const CategoryPage = () => {
     navigate(`${location.pathname}?${queryParams.toString()}`);
   };
   
+  // Handle subcategory toggle
+  const handleSubcategorySelect = (subcategory) => {
+    const params = new URLSearchParams(location.search);
+    
+    if (selectedSubcategory === subcategory) {
+      // Deselect if already selected
+      params.delete('subcategory');
+      setSelectedSubcategory(null);
+    } else {
+      // Select new subcategory
+      params.set('subcategory', subcategory);
+      setSelectedSubcategory(subcategory);
+    }
+    
+    // Keep existing search term if any
+    if (searchQuery) {
+      params.set('search', searchQuery);
+    }
+    
+    // Keep existing tags if any
+    if (selectedTags.length > 0) {
+      params.set('tag', selectedTags.join(','));
+    }
+    
+    // Update URL without reloading page
+    navigate(`/category/${category}?${params.toString()}`, { replace: true });
+  };
+  
   // Handle search
   const handleSearch = (query) => {
     setSearchQuery(query);
@@ -240,16 +306,24 @@ const CategoryPage = () => {
   
   // Clear all filters
   const clearFilters = () => {
-    setSelectedTags([]);
     setSearchQuery('');
-    navigate(location.pathname);
+    setSelectedTags([]);
+    setSelectedSubcategory(null);
+    navigate(`/category/${category}`);
   };
   
   return (
-    <div className="container mx-auto px-4 py-8">
+    <motion.div 
+      className="container mx-auto px-4 py-8"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.3 }}
+    >
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">
           {category === 'all' ? 'All Resources' : categoryData?.name || category}
+          {selectedSubcategory && <span className="text-lime-accent"> / {selectedSubcategory}</span>}
         </h1>
         <p className="text-gray-300">
           {category === 'all' 
@@ -261,8 +335,9 @@ const CategoryPage = () => {
       <div className="glass-card p-4 mb-8">
         <div className="mb-4">
           <SearchBar 
-            onSearch={handleSearch} 
-            minimal={true}
+            initialValue={searchQuery}
+            onSearch={handleSearch}
+            placeholder="Search in this category..."
           />
         </div>
         
@@ -312,7 +387,7 @@ const CategoryPage = () => {
           </button>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 };
 

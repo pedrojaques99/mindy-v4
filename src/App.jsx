@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { supabase } from './main';
+import { HelmetProvider } from 'react-helmet-async';
 
 // Components
 import Navbar from './components/Navbar';
@@ -13,7 +14,7 @@ import PageTransition from './components/ui/PageTransition';
 // Pages
 import HomePage from './pages/HomePage';
 import CategoryPage from './pages/CategoryPage';
-import ResourceDetailPage from './pages/ResourceDetailPage';
+import ResourcePage from './pages/ResourcePage';
 import FavoritesPage from './pages/FavoritesPage';
 import ProfilePage from './pages/ProfilePage';
 import SubmitResourcePage from './pages/SubmitResourcePage';
@@ -41,7 +42,7 @@ const AnimatedRoutes = () => {
         } />
         <Route path="/resource/:id" element={
           <PageTransition>
-            <ResourceDetailPage />
+            <ResourcePage />
           </PageTransition>
         } />
         <Route path="/favorites" element={
@@ -88,24 +89,26 @@ function App() {
 
   return (
     <UserProvider>
-      <BrowserRouter>
-        <div className="app-container min-h-screen flex flex-col grid-bg minimal-scrollbar">
-          <Navbar onOpenAuth={() => setShowAuthModal(true)} />
-          
-          <main className="flex-grow">
-            <AnimatedRoutes />
-          </main>
-          
-          <Footer />
-          
-          <AuthModal 
-            isOpen={showAuthModal} 
-            onClose={() => setShowAuthModal(false)} 
-          />
-          
-          <ScrollToTop />
-        </div>
-      </BrowserRouter>
+      <HelmetProvider>
+        <BrowserRouter>
+          <div className="app-container min-h-screen flex flex-col grid-bg minimal-scrollbar">
+            <Navbar onOpenAuth={() => setShowAuthModal(true)} />
+            
+            <main id="main-content" className="flex-grow">
+              <AnimatedRoutes />
+            </main>
+            
+            <Footer />
+            
+            <AuthModal 
+              isOpen={showAuthModal} 
+              onClose={() => setShowAuthModal(false)} 
+            />
+            
+            <ScrollToTop />
+          </div>
+        </BrowserRouter>
+      </HelmetProvider>
     </UserProvider>
   );
 }
