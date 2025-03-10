@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { supabase } from '../main';
 import { useUser } from '../context/UserContext';
+import ResourceCard from '../components/ResourceCard';
 import toast from 'react-hot-toast';
 
 const FavoritesPage = () => {
@@ -24,7 +25,17 @@ const FavoritesPage = () => {
           .eq('user_id', user.id);
           
         if (error) throw error;
-        setFavorites(data || []);
+        
+        // Process the data to ensure resource has favorited property
+        const processedData = (data || []).map(favorite => ({
+          ...favorite,
+          resources: {
+            ...favorite.resources,
+            favorited: true // Mark as favorited for the ResourceCard component
+          }
+        }));
+        
+        setFavorites(processedData);
       } catch (error) {
         console.error('Error fetching favorites:', error);
         toast.error('Failed to load favorites');
@@ -89,43 +100,12 @@ const FavoritesPage = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {favorites.map((favorite) => (
-            <div key={favorite.id} className="glass-card">
-              <div className="aspect-video bg-dark-400 rounded-t-xl overflow-hidden">
-                <img
-                  src={favorite.resources.image_url || 'https://via.placeholder.com/300x200'}
-                  alt={favorite.resources.title}
-                  className="w-full h-full object-cover"
-                />
-              </div>
-              <div className="p-4">
-                <h3 className="text-lg font-medium mb-2">{favorite.resources.title}</h3>
-                <p className="text-white/60 text-sm mb-4 line-clamp-2">
-                  {favorite.resources.description}
-                </p>
-                <div className="flex flex-wrap gap-2 mb-4">
-                  {favorite.resources.tags && favorite.resources.tags.map((tag, index) => (
-                    <span key={index} className="tag">
-                      {tag}
-                    </span>
-                  ))}
-                </div>
-                <div className="flex justify-between">
-                  <Link 
-                    to={`/resource/${favorite.resources.id}`}
-                    className="text-lime-accent hover:underline"
-                  >
-                    View Details
-                  </Link>
-                  <button
-                    onClick={() => handleRemoveFavorite(favorite.id)}
-                    className="text-white/60 hover:text-red-400 transition-colors"
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            </div>
+          {favorites.map((favorite, index) => (
+            <ResourceCard 
+              key={favorite.id} 
+              resource={favorite.resources} 
+              delay={index * 0.1}
+            />
           ))}
         </div>
       )}

@@ -82,6 +82,9 @@ const Navbar = ({ onOpenAuth }) => {
                   <Link to="/profile" className="block px-4 py-2 text-white/70 hover:text-lime-accent transition-colors duration-200">
                     Profile
                   </Link>
+                  <Link to="/edit-profile" className="block px-4 py-2 text-white/70 hover:text-lime-accent transition-colors duration-200">
+                    Edit Profile
+                  </Link>
                   <button 
                     onClick={handleSignOut}
                     className="block w-full text-left px-4 py-2 text-white/70 hover:text-lime-accent transition-colors duration-200"
@@ -142,6 +145,9 @@ const Navbar = ({ onOpenAuth }) => {
               <>
                 <Link to="/profile" className="py-2 text-white/60 hover:text-lime-accent transition-colors duration-200">
                   Profile
+                </Link>
+                <Link to="/edit-profile" className="py-2 text-white/60 hover:text-lime-accent transition-colors duration-200">
+                  Edit Profile
                 </Link>
                 <button 
                   onClick={handleSignOut}

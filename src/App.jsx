@@ -17,6 +17,7 @@ import CategoryPage from './pages/CategoryPage';
 import ResourcePage from './pages/ResourcePage';
 import FavoritesPage from './pages/FavoritesPage';
 import ProfilePage from './pages/ProfilePage';
+import EditProfilePage from './pages/EditProfilePage';
 import SubmitResourcePage from './pages/SubmitResourcePage';
 import NotFoundPage from './pages/NotFoundPage';
 import TestPage from './pages/TestPage';
@@ -55,6 +56,11 @@ const AnimatedRoutes = () => {
         <Route path="/profile" element={
           <PageTransition>
             <ProfilePage />
+          </PageTransition>
+        } />
+        <Route path="/edit-profile" element={
+          <PageTransition>
+            <EditProfilePage />
           </PageTransition>
         } />
         <Route path="/submit" element={

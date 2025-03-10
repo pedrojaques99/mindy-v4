@@ -62,6 +62,7 @@ export const UserProvider = ({ children }) => {
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
+        console.log('Auth state changed:', event);
         if (event === 'SIGNED_IN' && session) {
           setUser(session.user);
           await fetchUserProfile(session.user.id);
@@ -115,10 +116,23 @@ export const UserProvider = ({ children }) => {
 
   const signOut = async () => {
     try {
+      console.log('Attempting to sign out...');
       const { error } = await supabase.auth.signOut();
-      if (error) throw error;
+      
+      if (error) {
+        console.error('Error signing out:', error);
+        toast.error(`Sign out failed: ${error.message}`);
+        throw error;
+      }
+      
+      console.log('Sign out successful');
+      // Explicitly clear user state
+      setUser(null);
+      setProfile(null);
       return { success: true };
     } catch (error) {
+      console.error('Exception during sign out:', error);
+      toast.error(`Sign out failed: ${error.message}`);
       return { success: false, error: error.message };
     }
   };
