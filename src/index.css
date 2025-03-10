@@ -164,4 +164,30 @@
   .minimal-scrollbar::-webkit-scrollbar-thumb:hover {
     background: theme('colors.lime.accent');
   }
+
+  /* Spinner styles */
+  .spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    border-top-color: #a4e666;
+    animation: spin 1s ease-in-out infinite;
+  }
+
+  .spinner-sm {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255, 255, 255, 0.2);
+    border-radius: 50%;
+    border-top-color: #a4e666;
+    animation: spin 1s ease-in-out infinite;
+  }
+
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
 } 

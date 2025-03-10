@@ -1,0 +1,8 @@
+---
+description: always use supabase data, try first mcp server
+globs: 
+alwaysApply: false
+---
+
+# always use supabase data, try first mcp server
+

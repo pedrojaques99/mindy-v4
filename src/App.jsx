@@ -19,6 +19,8 @@ import FavoritesPage from './pages/FavoritesPage';
 import ProfilePage from './pages/ProfilePage';
 import SubmitResourcePage from './pages/SubmitResourcePage';
 import NotFoundPage from './pages/NotFoundPage';
+import TestPage from './pages/TestPage';
+import UserJourneyTestPage from './pages/UserJourneyTestPage';
 
 // Context
 import { UserProvider } from './context/UserContext';
@@ -58,6 +60,16 @@ const AnimatedRoutes = () => {
         <Route path="/submit" element={
           <PageTransition>
             <SubmitResourcePage />
+          </PageTransition>
+        } />
+        <Route path="/test-supabase" element={
+          <PageTransition>
+            <TestPage />
+          </PageTransition>
+        } />
+        <Route path="/test-user-journey" element={
+          <PageTransition>
+            <UserJourneyTestPage />
           </PageTransition>
         } />
         <Route path="*" element={

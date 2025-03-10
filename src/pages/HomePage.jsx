@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '../main';
 import { useUser } from '../context/UserContext';
@@ -30,47 +30,75 @@ import {
 import ResourceCard from '../components/ResourceCard';
 import SoftwareIcon from '../components/ui/SoftwareIcon';
 
-// Main categories with emojis
-const MAIN_CATEGORIES = [
-  { id: 'assets', name: 'Assets', emoji: '🎨', icon: <CollectionIcon className="w-5 h-5" />, count: 42 },
-  { id: 'tools', name: 'Tools', emoji: '🔧', icon: <CubeIcon className="w-5 h-5" />, count: 38 },
-  { id: 'community', name: 'Community', emoji: '👥', icon: <UserGroupIcon className="w-5 h-5" />, count: 15 },
-  { id: 'inspiration', name: 'Inspiration', emoji: '✨', icon: <LightBulbIcon className="w-5 h-5" />, count: 27 },
-  { id: 'learn', name: 'Learn', emoji: '📚', icon: <BookOpenIcon className="w-5 h-5" />, count: 31 },
-];
+// Utility function to check if a resource has a specific tag
+const resourceHasTag = (resource, tagToCheck) => {
+  if (!resource || !resource.tags || !tagToCheck) return false;
+  
+  // Convert tagToCheck to lowercase for case-insensitive comparison
+  const normalizedTag = tagToCheck.toLowerCase();
+  
+  // If tags is an array
+  if (Array.isArray(resource.tags)) {
+    return resource.tags.some(tag => 
+      tag && typeof tag === 'string' && tag.toLowerCase() === normalizedTag
+    );
+  }
+  
+  // If tags is a string (comma-separated or single tag)
+  if (typeof resource.tags === 'string') {
+    const tagsArray = resource.tags.split(',').map(t => t.trim().toLowerCase());
+    return tagsArray.includes(normalizedTag);
+  }
+  
+  return false;
+};
 
-// Popular subcategories with emojis
-const SUBCATEGORIES = [
-  { id: 'ai', name: 'AI', emoji: '🤖', count: 18 },
-  { id: 'moodboard', name: 'Moodboard', emoji: '🎭', count: 12 },
-  { id: 'reference', name: 'Reference', emoji: '📌', count: 24 },
-  { id: 'portfolio', name: 'Portfolio', emoji: '💼', count: 9 },
-  { id: 'design', name: 'Design', emoji: '🎨', count: 36 },
-  { id: 'fonts', name: 'Fonts', emoji: '🔤', count: 28 },
-  { id: 'icons', name: 'Icons', emoji: '🔍', count: 22 },
-  { id: 'textures', name: 'Textures', emoji: '🧩', count: 17 },
-  { id: 'sfx', name: 'SFX', emoji: '🔊', count: 14 },
-  { id: 'mockups', name: 'Mockups', emoji: '📱', count: 19 },
-  { id: 'ui-ux', name: 'UI/UX', emoji: '📊', count: 25 },
-  { id: '3d', name: '3D', emoji: '🧊', count: 16 },
-  { id: 'photos-videos', name: 'Photos & Videos', emoji: '📸', count: 31 },
-  { id: 'color', name: 'Color', emoji: '🎨', count: 11 },
-  { id: 'productivity', name: 'Productivity', emoji: '⚡', count: 20 },
-  { id: 'audiovisual', name: 'Audiovisual', emoji: '🎬', count: 15 },
-  { id: 'typography', name: 'Typography', emoji: '🔠', count: 23 },
-  { id: 'books', name: 'Books', emoji: '📚', count: 19 }
-];
+// Define the initial category structure
+const INITIAL_CATEGORIES = {
+  assets: { name: 'Assets', emoji: '🎨', icon: <CollectionIcon className="w-5 h-5" />, count: 0, subcategories: [
+    { id: 'fonts', name: 'Fonts', emoji: '🔤', count: 0 },
+    { id: 'icons', name: 'Icons', emoji: '🔍', count: 0 },
+    { id: 'textures', name: 'Textures', emoji: '🧩', count: 0 },
+    { id: 'sfx', name: 'SFX', emoji: '🔊', count: 0 },
+    { id: 'mockups', name: 'Mockups', emoji: '📱', count: 0 },
+    { id: '3d', name: '3D', emoji: '🧊', count: 0 },
+    { id: 'photos-videos', name: 'Images', emoji: '📸', count: 0 },
+    { id: 'color', name: 'Color', emoji: '🎨', count: 0 },
+  ]},
+  tools: { name: 'Tools', emoji: '🔧', icon: <CubeIcon className="w-5 h-5" />, count: 0, subcategories: [
+    { id: 'ai', name: 'AI', emoji: '🤖', count: 0 },
+    { id: 'productivity', name: 'Productivity', emoji: '⚡', count: 0 },
+  ]},
+  community: { name: 'Community', emoji: '👥', icon: <UserGroupIcon className="w-5 h-5" />, count: 0, subcategories: [
+    { id: 'portfolio', name: 'Portfolio', emoji: '💼', count: 0 },
+  ]},
+  reference: { name: 'Reference', emoji: '📌', icon: <LightBulbIcon className="w-5 h-5" />, count: 0, subcategories: [
+    { id: 'design', name: 'Design', emoji: '🎨', count: 0 },
+    { id: 'ui', name: 'UI', emoji: '📊', count: 0 },
+    { id: 'audiovisual', name: 'Audiovisual', emoji: '🎬', count: 0 },
+  ]},
+  inspiration: { name: 'Inspiration', emoji: '✨', icon: <LightBulbIcon className="w-5 h-5" />, count: 0, subcategories: [
+    { id: 'moodboard', name: 'Moodboard', emoji: '🎭', count: 0 },
+    { id: 'reference', name: 'Reference', emoji: '📌', count: 0 },
+  ]},
+  learn: { name: 'Learn', emoji: '📚', icon: <BookOpenIcon className="w-5 h-5" />, count: 0, subcategories: [
+    { id: 'design', name: 'Design', emoji: '🎨', count: 0 },
+    { id: 'ui-ux', name: 'UI/UX', emoji: '📊', count: 0 },
+    { id: 'typography', name: 'Typography', emoji: '🔠', count: 0 },
+    { id: 'books', name: 'Books', emoji: '📚', count: 0 }
+  ]}
+};
 
-// Software categories with their respective icons
-const SOFTWARE_CATEGORIES = [
-  { id: 'figma', name: 'Figma', icon: '/icons/figma-icon.svg', color: '#F24E1E', count: 32 },
-  { id: 'photoshop', name: 'Photoshop', icon: '/icons/photoshop-icon.svg', color: '#31A8FF', count: 28 },
-  { id: 'blender', name: 'Blender', icon: '/icons/blender-icon.svg', color: '#F5792A', count: 14 },
-  { id: 'cursor', name: 'Cursor', icon: '/icons/cursor-icon.svg', color: '#FFFFFF', count: 9 },
-  { id: 'illustrator', name: 'Illustrator', icon: '/icons/illustrator-icon.svg', color: '#FF9A00', count: 21 },
-  { id: 'indesign', name: 'InDesign', icon: '/icons/in-design-icon.svg', color: '#FF3366', count: 11 },
-  { id: 'after-effects', name: 'After Effects', icon: '/icons/ae-icon.svg', color: '#9999FF', count: 17 },
-  { id: 'premiere', name: 'Premiere', icon: '/icons/premiere-icon.svg', color: '#9999FF', count: 15 }
+// Initial software categories
+const INITIAL_SOFTWARE_CATEGORIES = [
+  { id: 'figma', name: 'Figma', icon: '/icons/figma-icon.svg', color: '#F24E1E', count: 0 },
+  { id: 'photoshop', name: 'Photoshop', icon: '/icons/photoshop-icon.svg', color: '#31A8FF', count: 0 },
+  { id: 'blender', name: 'Blender', icon: '/icons/blender-icon.svg', color: '#F5792A', count: 0 },
+  { id: 'cursor', name: 'Cursor', icon: '/icons/cursor-icon.svg', color: '#FFFFFF', count: 0 },
+  { id: 'illustrator', name: 'Illustrator', icon: '/icons/illustrator-icon.svg', color: '#FF9A00', count: 0 },
+  { id: 'indesign', name: 'InDesign', icon: '/icons/in-design-icon.svg', color: '#FF3366', count: 0 },
+  { id: 'after-effects', name: 'After Effects', icon: '/icons/ae-icon.svg', color: '#9999FF', count: 0 },
+  { id: 'premiere', name: 'Premiere', icon: '/icons/premiere-icon.svg', color: '#9999FF', count: 0 }
 ];
 
 // Popular tags for suggestions
@@ -88,11 +116,17 @@ const HomePage = () => {
   const [popularResources, setPopularResources] = useState([]);
   const [trendingResources, setTrendingResources] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [categories, setCategories] = useState(INITIAL_CATEGORIES);
+  const [softwareCategories, setSoftwareCategories] = useState(INITIAL_SOFTWARE_CATEGORIES);
   const [selectedFilters, setSelectedFilters] = useState({
     category: null,
     subcategory: null,
     software: null
   });
+  const [selectedFilterDisplay, setSelectedFilterDisplay] = useState({});
+  
+  // Get flattened subcategories
+  const subcategories = Object.values(categories).flatMap(category => category.subcategories);
   
   useEffect(() => {
     const fetchResources = async () => {
@@ -129,10 +163,118 @@ const HomePage = () => {
         if (popularError) throw popularError;
         setPopularResources(popularData || []);
         
+        // Fetch count for each category
+        await fetchCategoryCounts();
+        
+        // Fetch count for each software tag
+        await fetchSoftwareCounts();
+        
       } catch (error) {
         console.error('Error fetching resources:', error);
       } finally {
         setLoading(false);
+      }
+    };
+    
+    // Fetch counts for all categories and subcategories
+    const fetchCategoryCounts = async () => {
+      try {
+        // Get all resources first (we need to count locally because of array filters)
+        const { data: allResources, error } = await supabase
+          .from('resources')
+          .select('*');
+        
+        if (error) throw error;
+        
+        if (!allResources) return;
+        
+        // DIAGNOSTIC: Log all unique category/subcategory combinations from the database
+        const categorySubcategoryPairs = {};
+        allResources.forEach(resource => {
+          const category = resource.category || 'undefined';
+          const subcategory = resource.subcategory || 'undefined';
+          const key = `${category}/${subcategory}`;
+          
+          if (!categorySubcategoryPairs[key]) {
+            categorySubcategoryPairs[key] = 0;
+          }
+          categorySubcategoryPairs[key]++;
+        });
+        
+        console.log('Category/Subcategory pairs in database:', categorySubcategoryPairs);
+        
+        // Map database category/subcategory names to our UI structure
+        // This handles cases where DB names don't match our UI structure
+        const categoryMap = {
+          'reference': 'reference',
+          'tool': 'tools',
+          'shop': 'learn',
+          // Add other mappings as needed
+        };
+        
+        // Create a deep copy of the categories structure
+        const updatedCategories = JSON.parse(JSON.stringify(INITIAL_CATEGORIES));
+        
+        // Count resources for each category and subcategory
+        Object.keys(updatedCategories).forEach(categoryKey => {
+          // Find resources for this category, using the mapping if available
+          const resourcesInCategory = allResources.filter(r => {
+            if (!r.category) return false;
+            
+            const normalizedCategory = r.category.toLowerCase();
+            // Check direct match
+            if (normalizedCategory === categoryKey.toLowerCase()) return true;
+            
+            // Check via mapping
+            return Object.entries(categoryMap).some(([dbCategory, uiCategory]) => 
+              normalizedCategory === dbCategory.toLowerCase() && 
+              uiCategory.toLowerCase() === categoryKey.toLowerCase()
+            );
+          });
+          
+          updatedCategories[categoryKey].count = resourcesInCategory.length;
+          
+          // Count for each subcategory
+          updatedCategories[categoryKey].subcategories.forEach(subcategory => {
+            // Case-insensitive matching for subcategory
+            const resourcesInSubcategory = allResources.filter(r => 
+              r.subcategory && r.subcategory.toLowerCase() === subcategory.id.toLowerCase()
+            );
+            subcategory.count = resourcesInSubcategory.length;
+          });
+        });
+        
+        setCategories(updatedCategories);
+      } catch (error) {
+        console.error('Error fetching category counts:', error);
+      }
+    };
+    
+    // Fetch counts for software categories
+    const fetchSoftwareCounts = async () => {
+      try {
+        // Get all resources first
+        const { data: allResources, error } = await supabase
+          .from('resources')
+          .select('*');
+        
+        if (error) throw error;
+        
+        if (!allResources) return;
+        
+        // Create a deep copy of software categories
+        const updatedSoftware = JSON.parse(JSON.stringify(INITIAL_SOFTWARE_CATEGORIES));
+        
+        // Count resources for each software
+        updatedSoftware.forEach(software => {
+          // Use the utility function to check for tag matches
+          const resourcesWithSoftware = allResources.filter(r => resourceHasTag(r, software.id));
+          software.count = resourcesWithSoftware.length;
+        });
+        
+        setSoftwareCategories(updatedSoftware);
+      } catch (error) {
+        console.error('Error fetching software counts:', error);
       }
     };
     
@@ -172,34 +314,101 @@ const HomePage = () => {
   
   // Handle tag selection
   const handleTagSelect = (tag) => {
-    navigate(`/category/all?tag=${encodeURIComponent(tag)}`);
+    navigate(`/category/all?tag=${encodeURIComponent(tag.trim())}`);
   };
   
   // Handle filter selection
   const handleFilterSelect = (type, value) => {
-    setSelectedFilters(prev => ({
-      ...prev,
-      [type]: prev[type] === value ? null : value
-    }));
+    // Create a copy of the current filters
+    const newFilters = { ...selectedFilters };
+    
+    // Toggle filter selection
+    if (newFilters[type] === value) {
+      // If already selected, deselect it
+      newFilters[type] = null;
+    } else {
+      // Otherwise, select it
+      newFilters[type] = value;
+    }
+    
+    // Update filters
+    setSelectedFilters(newFilters);
+    
+    // Apply filters
+    applyFilters(newFilters);
+    
+    // Update display text for selected filter
+    if (newFilters[type]) {
+      let displayText = value;
+      let emoji = '';
+      
+      if (type === 'category') {
+        const category = categories[value];
+        displayText = category?.name || value;
+        emoji = category?.emoji || '';
+      } else if (type === 'subcategory') {
+        const subcategory = subcategories.find(s => s.id === value);
+        displayText = subcategory?.name || value;
+        emoji = subcategory?.emoji || '';
+      } else if (type === 'software') {
+        const software = softwareCategories.find(s => s.id === value);
+        displayText = software?.name || value;
+      }
+      
+      // Add to selected filter display
+      setSelectedFilterDisplay(prev => ({
+        ...prev,
+        [type]: { value, displayText, emoji }
+      }));
+    } else {
+      // Remove from selected filter display
+      const newDisplay = { ...selectedFilterDisplay };
+      delete newDisplay[type];
+      setSelectedFilterDisplay(newDisplay);
+    }
   };
   
   // Apply filters
-  const applyFilters = () => {
+  const applyFilters = (filters = selectedFilters) => {
     const params = new URLSearchParams();
     
-    if (selectedFilters.category) {
-      params.set('category', selectedFilters.category);
-    }
+    // We use filter: true parameter to indicate that filters are being applied
+    // This helps distinguish from regular navigation
+    params.set('filter', 'true');
     
-    if (selectedFilters.subcategory) {
-      params.set('subcategory', selectedFilters.subcategory);
+    // Handle category filter
+    if (filters.category) {
+      // For category, we'll use it in the path rather than as a query parameter
+      const categoryPath = filters.category;
+      
+      // Add subcategory as a query parameter if present
+      if (filters.subcategory) {
+        params.set('subcategory', filters.subcategory);
+      }
+      
+      // Add software as a tag parameter if present
+      if (filters.software) {
+        params.set('tag', filters.software);
+      }
+      
+      // Navigate to category page with appropriate parameters
+      navigate(`/category/${categoryPath}?${params.toString()}`);
+    } else {
+      // If no category is selected, we use the 'all' category
+      
+      // Add subcategory as a query parameter if present
+      if (filters.subcategory) {
+        params.set('subcategory', filters.subcategory);
+      }
+      
+      // Add software as a tag parameter if present
+      if (filters.software) {
+        params.set('tag', filters.software);
+      }
+      
+      // Navigate to 'all' category with appropriate parameters
+      navigate(`/category/all?${params.toString()}`);
     }
-    
-    if (selectedFilters.software) {
-      params.set('tag', selectedFilters.software);
-    }
-    
-    navigate(`/category/all?${params.toString()}`);
   };
   
   // Clear all filters
@@ -209,7 +418,14 @@ const HomePage = () => {
       subcategory: null,
       software: null
     });
-    navigate('/category/all');
+    setSelectedFilterDisplay({});
+    setSearchQuery('');
+    
+    // Clear URL parameters
+    navigate('/');
+    
+    // Reset resources to initial state
+    fetchResources();
   };
   
   // Section divider component for better organization
@@ -323,15 +539,15 @@ const HomePage = () => {
               let emoji = '';
               
               if (type === 'category') {
-                const category = MAIN_CATEGORIES.find(c => c.id === value);
+                const category = categories[value];
                 displayText = category?.name || value;
                 emoji = category?.emoji || '';
               } else if (type === 'subcategory') {
-                const subcategory = SUBCATEGORIES.find(s => s.id === value);
+                const subcategory = subcategories.find(s => s.id === value);
                 displayText = subcategory?.name || value;
                 emoji = subcategory?.emoji || '';
               } else if (type === 'software') {
-                const software = SOFTWARE_CATEGORIES.find(s => s.id === value);
+                const software = softwareCategories.find(s => s.id === value);
                 displayText = software?.name || value;
               }
               
@@ -363,65 +579,46 @@ const HomePage = () => {
         </div>
       )}
       
-      {/* Categories Filter */}
-      <section className="container mx-auto px-4 mb-6">
-        <div className="flex items-center mb-3">
-          <h3 className="text-sm font-medium text-white">Categories</h3>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
-          {MAIN_CATEGORIES.map((category) => (
-            <button
-              key={category.id}
-              onClick={() => handleFilterSelect('category', category.id)}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg ${
-                selectedFilters.category === category.id
-                  ? 'bg-[#bfff58]/20 text-[#bfff58] border border-[#bfff58]/30'
-                  : 'bg-dark-200 text-white hover:bg-dark-300 border border-transparent'
-              } transition-colors`}
-            >
-              <div className="flex items-center">
-                <span className="mr-2 text-xl" role="img" aria-label={category.name}>{category.emoji}</span>
-                <span className="text-sm">{category.name}</span>
-              </div>
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-dark-300/80 text-gray-400">{category.count}</span>
-            </button>
-          ))}
-        </div>
-      </section>
-      
       {/* Subcategories Filter */}
-      <section className="container mx-auto px-4 mb-6">
-        <div className="flex items-center mb-3">
-          <h3 className="text-sm font-medium text-white">Subcategories</h3>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-          {SUBCATEGORIES.map((subcategory) => (
-            <button
-              key={subcategory.id}
-              onClick={() => handleFilterSelect('subcategory', subcategory.id)}
-              className={`flex items-center justify-between px-3 py-2 rounded-lg ${
-                selectedFilters.subcategory === subcategory.id
-                  ? 'bg-[#bfff58]/20 text-[#bfff58] border border-[#bfff58]/30'
-                  : 'bg-dark-200 text-white hover:bg-dark-300 border border-transparent'
-              } transition-colors`}
-            >
-              <div className="flex items-center">
-                <span className="mr-2 text-lg" role="img" aria-label={subcategory.name}>{subcategory.emoji}</span>
-                <span className="text-sm">{subcategory.name}</span>
-              </div>
-              <span className="text-xs px-1.5 py-0.5 rounded-full bg-dark-300/80 text-gray-400">{subcategory.count}</span>
-            </button>
-          ))}
-        </div>
+      <section className="container mx-auto px-4 mb-8">
+        {Object.entries(categories).map(([categoryId, category]) => (
+          <div key={categoryId} className="mb-6">
+            <div className="flex items-center justify-between mb-3">
+              <h4 className="text-sm font-medium text-white/90 uppercase tracking-wider">{category.name}</h4>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-dark-300/80 text-gray-400">{category.count}</span>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+              {category.subcategories.map((subcategory) => (
+                <button
+                  key={subcategory.id}
+                  onClick={() => handleFilterSelect('subcategory', subcategory.id)}
+                  className={`flex items-center justify-between px-3 py-2 rounded-lg ${
+                    selectedFilters.subcategory === subcategory.id
+                      ? 'bg-[#bfff58]/20 text-[#bfff58] border border-[#bfff58]/30'
+                      : 'bg-dark-200 text-white hover:bg-dark-300 border border-transparent'
+                  } transition-colors`}
+                >
+                  <div className="flex items-center">
+                    <span className="mr-2 text-lg" role="img" aria-label={subcategory.name}>{subcategory.emoji}</span>
+                    <span className="text-sm">{subcategory.name}</span>
+                  </div>
+                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-dark-300/80 text-gray-400">{subcategory.count}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+        ))}
       </section>
       
       {/* Software Filter */}
-      <section className="container mx-auto px-4 mb-6">
-        <div className="flex items-center mb-3">
-          <h3 className="text-sm font-medium text-white">Software</h3>
+      <section className="container mx-auto px-4 mb-8">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-medium text-white/90 uppercase tracking-wider">Software</h3>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-dark-300/80 text-gray-400">{softwareCategories.reduce((sum, sw) => sum + sw.count, 0)}</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
-          {SOFTWARE_CATEGORIES.map((software) => (
+          {softwareCategories.map((software) => (
             <button
               key={software.id}
               onClick={() => handleFilterSelect('software', software.id)}

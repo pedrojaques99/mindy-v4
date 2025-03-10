@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '../main';
 import SearchBar from '../components/SearchBar';
 import FilterTags from '../components/FilterTags';
 import ResourceCard from '../components/ResourceCard';
 import toast from 'react-hot-toast';
+import { ArrowLeftIcon, HomeIcon, ChevronRightIcon } from '@heroicons/react/outline';
 
 const CategoryPage = () => {
   const { category } = useParams();
@@ -29,11 +30,16 @@ const CategoryPage = () => {
     const searchParam = queryParams.get('search');
     const tagParam = queryParams.get('tag');
     const subcategoryParam = queryParams.get('subcategory');
+    const filterParam = queryParams.get('filter');
     
+    // Set search query if present
     if (searchParam) {
       setSearchQuery(searchParam);
+    } else {
+      setSearchQuery('');
     }
     
+    // Set tag filters if present
     if (tagParam) {
       // Split comma-separated tags into an array
       const tags = tagParam.split(',').map(tag => tag.trim()).filter(Boolean);
@@ -42,6 +48,7 @@ const CategoryPage = () => {
       setSelectedTags([]);
     }
     
+    // Set subcategory filter if present
     if (subcategoryParam) {
       setSelectedSubcategory(subcategoryParam);
     } else {
@@ -52,6 +59,8 @@ const CategoryPage = () => {
     setPage(0);
     setResources([]);
     setHasMore(true);
+    
+    // Fetch data with the new filters
     fetchData();
   }, [location.search, category]);
   
@@ -82,11 +91,16 @@ const CategoryPage = () => {
         }
       }
       
+      // Parse URL parameters
+      const urlParams = new URLSearchParams(location.search);
+      const urlSearchQuery = urlParams.get('search');
+      const urlTagQuery = urlParams.get('tag');
+      const urlSubcategoryQuery = urlParams.get('subcategory');
+      
       // Fetch resources with pagination
       let query = supabase
         .from('resources')
-        .select('*')
-        .range(page * ITEMS_PER_PAGE, (page * ITEMS_PER_PAGE) + ITEMS_PER_PAGE - 1);
+        .select('*');
       
       // Apply category filter
       if (category !== 'all') {
@@ -95,17 +109,26 @@ const CategoryPage = () => {
       }
       
       // Apply search query filter if present in URL
-      const urlParams = new URLSearchParams(location.search);
-      const urlSearchQuery = urlParams.get('search');
       if (urlSearchQuery) {
         query = query.or(`title.ilike.%${urlSearchQuery}%,description.ilike.%${urlSearchQuery}%`);
       }
       
-      // Apply subcategory filter if present
-      const urlSubcategoryQuery = urlParams.get('subcategory');
+      // Apply subcategory filter if present - FIXED to use proper column name and comparison
       if (urlSubcategoryQuery) {
         query = query.eq('subcategory', urlSubcategoryQuery);
       }
+      
+      // Apply tag filtering at the database level if possible
+      if (urlTagQuery) {
+        const tags = urlTagQuery.split(',').map(tag => tag.trim()).filter(Boolean);
+        if (tags.length === 1) {
+          // For single tag, we can use contains in the query
+          query = query.contains('tags', [tags[0]]);
+        }
+      }
+      
+      // Add pagination
+      query = query.range(page * ITEMS_PER_PAGE, (page * ITEMS_PER_PAGE) + ITEMS_PER_PAGE - 1);
       
       const { data: resourcesData, error: resourcesError } = await query;
       
@@ -115,14 +138,12 @@ const CategoryPage = () => {
         setHasMore(false);
       }
       
-      // Filter by tags if present in URL
-      const urlTagQuery = urlParams.get('tag');
+      // For multiple tags, we need to filter in memory
       let filteredResources = resourcesData;
-      
       if (urlTagQuery) {
         const tags = urlTagQuery.split(',').map(tag => tag.trim()).filter(Boolean);
         
-        if (tags.length > 0) {
+        if (tags.length > 1) {
           filteredResources = resourcesData.filter(resource => {
             // Check if resource has all the selected tags
             return tags.every(tag => resource.tags && resource.tags.includes(tag));
@@ -166,11 +187,16 @@ const CategoryPage = () => {
     try {
       setLoading(true);
       
+      // Parse URL parameters
+      const urlParams = new URLSearchParams(location.search);
+      const urlSearchQuery = urlParams.get('search');
+      const urlTagQuery = urlParams.get('tag');
+      const urlSubcategoryQuery = urlParams.get('subcategory');
+      
       // Fetch next page of resources
       let query = supabase
         .from('resources')
-        .select('*')
-        .range(nextPage * ITEMS_PER_PAGE, (nextPage * ITEMS_PER_PAGE) + ITEMS_PER_PAGE - 1);
+        .select('*');
       
       // Apply category filter
       if (category !== 'all') {
@@ -178,14 +204,26 @@ const CategoryPage = () => {
       }
       
       // Apply search query filter if present
-      if (searchQuery) {
-        query = query.or(`title.ilike.%${searchQuery}%,description.ilike.%${searchQuery}%`);
+      if (urlSearchQuery) {
+        query = query.or(`title.ilike.%${urlSearchQuery}%,description.ilike.%${urlSearchQuery}%`);
       }
       
       // Apply subcategory filter if present
-      if (selectedSubcategory) {
-        query = query.eq('subcategory', selectedSubcategory);
+      if (urlSubcategoryQuery) {
+        query = query.eq('subcategory', urlSubcategoryQuery);
       }
+      
+      // Apply tag filtering at the database level if possible
+      if (urlTagQuery) {
+        const tags = urlTagQuery.split(',').map(tag => tag.trim()).filter(Boolean);
+        if (tags.length === 1) {
+          // For single tag, we can use contains in the query
+          query = query.contains('tags', [tags[0]]);
+        }
+      }
+      
+      // Add pagination
+      query = query.range(nextPage * ITEMS_PER_PAGE, (nextPage * ITEMS_PER_PAGE) + ITEMS_PER_PAGE - 1);
       
       const { data: newResources, error } = await query;
       
@@ -195,14 +233,17 @@ const CategoryPage = () => {
         setHasMore(false);
       }
       
-      // Filter by selected tags
+      // For multiple tags, we need to filter in memory
       let filteredNewResources = newResources;
-      
-      if (selectedTags.length > 0) {
-        filteredNewResources = newResources.filter(resource => {
-          // Check if resource has all the selected tags
-          return selectedTags.every(tag => resource.tags && resource.tags.includes(tag));
-        });
+      if (urlTagQuery) {
+        const tags = urlTagQuery.split(',').map(tag => tag.trim()).filter(Boolean);
+        
+        if (tags.length > 1) {
+          filteredNewResources = newResources.filter(resource => {
+            // Check if resource has all the selected tags
+            return tags.every(tag => resource.tags && resource.tags.includes(tag));
+          });
+        }
       }
       
       // Add new resources to existing ones
@@ -236,28 +277,49 @@ const CategoryPage = () => {
   
   // Handle tag toggle
   const handleTagToggle = (tag) => {
-    let newSelectedTags;
+    // Create a copy of the current selected tags
+    let newTags = [...selectedTags];
     
-    if (selectedTags.includes(tag)) {
+    // Check if tag is already selected
+    if (newTags.includes(tag)) {
       // Remove tag if already selected
-      newSelectedTags = selectedTags.filter(t => t !== tag);
+      newTags = newTags.filter(t => t !== tag);
     } else {
       // Add tag if not already selected
-      newSelectedTags = [...selectedTags, tag];
+      newTags.push(tag);
     }
     
-    setSelectedTags(newSelectedTags);
+    // Update URL with new tags
+    const params = new URLSearchParams(location.search);
     
-    // Update URL with selected tags
-    const queryParams = new URLSearchParams(location.search);
-    
-    if (newSelectedTags.length > 0) {
-      queryParams.set('tag', newSelectedTags.join(','));
+    if (newTags.length > 0) {
+      params.set('tag', newTags.join(','));
     } else {
-      queryParams.delete('tag');
+      params.delete('tag');
     }
     
-    navigate(`${location.pathname}?${queryParams.toString()}`);
+    // Keep other parameters
+    const searchParam = params.get('search');
+    const subcategoryParam = params.get('subcategory');
+    
+    // Preserve filter parameter if it exists
+    if (params.has('filter')) {
+      params.set('filter', 'true');
+    }
+    
+    // Navigate to updated URL
+    navigate({
+      pathname: `/category/${category}`,
+      search: params.toString()
+    });
+    
+    // Update state
+    setSelectedTags(newTags);
+    
+    // Reset pagination
+    setPage(0);
+    setResources([]);
+    setHasMore(true);
   };
   
   // Handle subcategory toggle
@@ -284,8 +346,18 @@ const CategoryPage = () => {
       params.set('tag', selectedTags.join(','));
     }
     
-    // Update URL without reloading page
-    navigate(`/category/${category}?${params.toString()}`, { replace: true });
+    // Preserve filter parameter if it exists
+    if (params.has('filter')) {
+      params.set('filter', 'true');
+    }
+    
+    // Update URL and trigger a page fetch
+    navigate(`/category/${category}?${params.toString()}`);
+    
+    // Reset pagination
+    setPage(0);
+    setResources([]);
+    setHasMore(true);
   };
   
   // Handle search
@@ -309,7 +381,15 @@ const CategoryPage = () => {
     setSearchQuery('');
     setSelectedTags([]);
     setSelectedSubcategory(null);
+    setPage(0);
+    setResources([]);
+    setHasMore(true);
+    
+    // Navigate without any query parameters
     navigate(`/category/${category}`);
+    
+    // Fetch fresh data
+    fetchData();
   };
   
   return (
@@ -320,6 +400,56 @@ const CategoryPage = () => {
       exit={{ opacity: 0 }}
       transition={{ duration: 0.3 }}
     >
+      {/* Navigation */}
+      <div className="flex items-center mb-6 text-sm">
+        <button 
+          onClick={() => navigate(-1)} 
+          className="flex items-center text-gray-400 hover:text-lime-accent transition-colors mr-4"
+        >
+          <ArrowLeftIcon className="h-4 w-4 mr-1" />
+          <span>Back</span>
+        </button>
+        
+        <div className="flex items-center text-gray-400">
+          <Link to="/" className="flex items-center hover:text-lime-accent transition-colors">
+            <HomeIcon className="h-4 w-4 mr-1" />
+            <span>Home</span>
+          </Link>
+          
+          <ChevronRightIcon className="h-3 w-3 mx-2" />
+          
+          <Link 
+            to="/category/all" 
+            className={`hover:text-lime-accent transition-colors ${
+              category === 'all' && !selectedSubcategory ? 'text-lime-accent' : ''
+            }`}
+          >
+            Resources
+          </Link>
+          
+          {category !== 'all' && (
+            <>
+              <ChevronRightIcon className="h-3 w-3 mx-2" />
+              <Link 
+                to={`/category/${category}`}
+                className={`hover:text-lime-accent transition-colors ${
+                  !selectedSubcategory ? 'text-lime-accent' : ''
+                }`}
+              >
+                {categoryData?.name || category}
+              </Link>
+            </>
+          )}
+          
+          {selectedSubcategory && (
+            <>
+              <ChevronRightIcon className="h-3 w-3 mx-2" />
+              <span className="text-lime-accent">{selectedSubcategory}</span>
+            </>
+          )}
+        </div>
+      </div>
+      
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">
           {category === 'all' ? 'All Resources' : categoryData?.name || category}

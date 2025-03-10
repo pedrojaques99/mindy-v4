@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../main';
 import { useUser } from '../context/UserContext';
+import ProfileEditor from '../components/ProfileEditor';
 import toast from 'react-hot-toast';
 
 const ProfilePage = () => {
@@ -52,7 +53,9 @@ const ProfilePage = () => {
       <div className="glass-card p-8 mb-8">
         <h1 className="text-2xl font-bold mb-6">Profile</h1>
         
-        <div className="mb-6">
+        <ProfileEditor />
+        
+        <div className="mt-8">
           <h2 className="text-lg font-medium mb-2">Account Information</h2>
           <div className="bg-dark-400 p-4 rounded-lg">
             <div className="mb-4">
@@ -66,15 +69,15 @@ const ProfilePage = () => {
               </span>
             </div>
           </div>
-        </div>
-        
-        <div className="flex flex-wrap gap-4">
-          <button 
-            onClick={handleSignOut}
-            className="btn btn-secondary"
-          >
-            Sign Out
-          </button>
+          
+          <div className="mt-6">
+            <button 
+              onClick={handleSignOut}
+              className="btn btn-secondary"
+            >
+              Sign Out
+            </button>
+          </div>
         </div>
       </div>
       

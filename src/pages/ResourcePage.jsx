@@ -248,25 +248,35 @@ export default function ResourcePage() {
   
   // Navigate to tag filter
   const handleTagClick = (tag) => {
-    navigate(`/category/all?tag=${encodeURIComponent(tag)}`);
+    // Ensure tag is properly encoded for URL
+    const encodedTag = encodeURIComponent(tag.trim());
+    navigate(`/category/all?tag=${encodedTag}`);
   };
   
   // Open external URL
   const openExternalUrl = () => {
     if (resource?.url) {
+      // Track view before opening external URL
+      trackView(resource.id);
       window.open(resource.url, '_blank', 'noopener,noreferrer');
     }
   };
   
   // Check if a tag is a software name
   const isSoftwareTag = (tag) => {
-    const softwareNames = ['figma', 'photoshop', 'illustrator', 'sketch', 'adobe', 'react', 'cursor', 'vscode', 'blender', 'indesign', 'after-effects', 'premiere'];
-    return softwareNames.some(software => tag.toLowerCase().includes(software));
+    const softwareTags = ['figma', 'photoshop', 'illustrator', 'after-effects', 'premiere', 'blender', 'cursor', 'indesign'];
+    return softwareTags.includes(tag.toLowerCase());
   };
   
   // Handle back button click
   const handleBack = () => {
-    navigate(-1);
+    // Check if we have a previous location in history
+    if (window.history.length > 1) {
+      navigate(-1); // Go back to previous page
+    } else {
+      // If no history, go to home page
+      navigate('/');
+    }
   };
   
   // Handle tab change

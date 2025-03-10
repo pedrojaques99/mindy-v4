@@ -1,9 +1,12 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowUpIcon } from '@heroicons/react/outline';
 
+// This component ensures that the page scrolls to the top when navigating to a new route
 export default function ScrollToTop() {
   const [isVisible, setIsVisible] = useState(false);
+  const { pathname, search } = useLocation();
 
   // Show button when page is scrolled down
   useEffect(() => {
@@ -18,6 +21,23 @@ export default function ScrollToTop() {
     window.addEventListener('scroll', toggleVisibility);
     return () => window.removeEventListener('scroll', toggleVisibility);
   }, []);
+  
+  // Scroll to top when route changes
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+    
+    // Focus on main content for accessibility
+    const mainContent = document.getElementById('main-content');
+    if (mainContent) {
+      // Set focus without scrolling (which would conflict with our smooth scroll)
+      setTimeout(() => {
+        mainContent.focus({ preventScroll: true });
+      }, 100);
+    }
+  }, [pathname, search]);
 
   // Scroll to top smoothly
   const scrollToTop = () => {

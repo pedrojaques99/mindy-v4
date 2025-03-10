@@ -100,6 +100,27 @@ const Footer = () => {
             </a>
           </div>
         </div>
+
+        {/* Developer Tools (only visible in development) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="mt-6 pt-6 border-t border-dark-300/50">
+            <p className="text-xs text-gray-500 mb-2">Developer Tools</p>
+            <div className="flex flex-wrap gap-3">
+              <Link 
+                to="/test-supabase" 
+                className="text-xs text-gray-500 hover:text-lime-accent transition-colors"
+              >
+                Supabase Test
+              </Link>
+              <Link 
+                to="/test-user-journey" 
+                className="text-xs text-gray-500 hover:text-lime-accent transition-colors"
+              >
+                User Journey Test
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
     </footer>
   );

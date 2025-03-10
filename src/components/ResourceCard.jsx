@@ -179,7 +179,10 @@ export default function ResourceCard({ resource, delay = 0 }) {
   const handleTagClick = (e, tag) => {
     e.preventDefault();
     e.stopPropagation();
-    navigate(`/category/all?tag=${encodeURIComponent(tag)}`);
+    
+    // Ensure tag is properly encoded for URL
+    const encodedTag = encodeURIComponent(tag.trim());
+    navigate(`/category/all?tag=${encodedTag}`);
   };
   
   // Handle image error
@@ -353,7 +356,20 @@ export default function ResourceCard({ resource, delay = 0 }) {
                 <div className="flex items-center">
                   <ExternalLinkIcon className="w-3.5 h-3.5 mr-1" />
                   <span className="truncate max-w-[120px]">
-                    {resource.url ? new URL(resource.url).hostname.replace('www.', '') : 'No URL'}
+                    {resource.url ? (
+                      (() => {
+                        try {
+                          // Ensure URL has a protocol
+                          const urlToProcess = resource.url.startsWith('http') 
+                            ? resource.url 
+                            : `https://${resource.url}`;
+                          return new URL(urlToProcess).hostname.replace('www.', '');
+                        } catch (error) {
+                          console.error('Invalid URL:', resource.url);
+                          return 'Invalid URL';
+                        }
+                      })()
+                    ) : 'No URL'}
                   </span>
                 </div>
               </div>
