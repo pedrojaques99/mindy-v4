@@ -8,6 +8,7 @@ import GlassCard from '../components/ui/GlassCard';
 import ResourceSkeleton from '../components/ui/ResourceSkeleton';
 import CategoryBadge from '../components/ui/CategoryBadge';
 import Tooltip from '../components/ui/Tooltip';
+import CodeBackground from '../components/ui/CodeBackground';
 import { 
   ArrowRightIcon, 
   InformationCircleIcon, 
@@ -443,12 +444,12 @@ const HomePage = () => {
     <div className="min-h-screen">
       {/* Hero Section */}
       <section className="relative py-16 md:py-24 overflow-hidden">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-dark-300/50 to-dark-100"></div>
+        {/* Background gradient with reduced opacity to make code effect more visible */}
+        <div className="absolute inset-0 bg-gradient-to-b from-dark-300/60 to-dark-100/80"></div>
         
-        {/* Animated background dots */}
-        <div className="absolute inset-0 opacity-10">
-          <div className="absolute inset-0 bg-[radial-gradient(#bfff58_1px,transparent_1px)] [background-size:20px_20px]"></div>
+        {/* Interactive code background - ensure it spans full width/height */}
+        <div className="absolute inset-0 w-full h-full overflow-hidden">
+          <CodeBackground />
         </div>
         
         <div className="container mx-auto px-4 relative z-10">
@@ -458,10 +459,10 @@ const HomePage = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6 }}
           >
-            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white">
-              Discover <span className="text-[#bfff58]">Creative Resources</span> for Your Projects
+            <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white drop-shadow-md">
+              Discover <span className="text-[#bfff58] drop-shadow-lg">Creative Resources</span> for Your Projects
             </h1>
-            <p className="text-lg text-gray-300 mb-8">
+            <p className="text-lg text-gray-300 mb-8 drop-shadow-sm">
               Find the best tools, assets, and inspiration for designers, developers, and creators.
             </p>
             
