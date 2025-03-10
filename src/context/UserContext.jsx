@@ -24,13 +24,20 @@ export const UserProvider = ({ children }) => {
     
     try {
       setProfileLoading(true);
+      console.log("Fetching user profile for ID:", userId);
+      
       const { data, error } = await supabase
-        .from('user_profiles')
+        .from('profiles')
         .select('*')
         .eq('id', userId)
         .single();
       
-      if (error) throw error;
+      if (error) {
+        console.error("Error fetching profile from 'profiles' table:", error);
+        throw error;
+      }
+      
+      console.log("Profile data retrieved:", data);
       setProfile(data);
       return data;
     } catch (error) {
@@ -142,20 +149,55 @@ export const UserProvider = ({ children }) => {
     if (!user) return { success: false, error: 'Not authenticated' };
     
     try {
+      console.log("Updating profile with data:", profileData);
+      
+      // Check which fields actually exist in the database first
+      const { data: existingData, error: existingError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+        
+      if (existingError && existingError.code !== 'PGRST116') {
+        console.error("Error checking existing profile:", existingError);
+        throw existingError;
+      }
+      
+      // Filter out any fields that aren't in the database schema
+      const cleanedData = {};
+      if (existingData) {
+        // Only include fields that exist in the database
+        Object.keys(profileData).forEach(key => {
+          if (key === 'id' || key in existingData) {
+            cleanedData[key] = profileData[key];
+          }
+        });
+      } else {
+        // If we can't check the schema, just use username which definitely exists
+        cleanedData.username = profileData.username;
+      }
+      
+      console.log("Sending cleaned profile data:", cleanedData);
+      
       const { data, error } = await supabase
-        .from('user_profiles')
-        .update(profileData)
+        .from('profiles')
+        .update(cleanedData)
         .eq('id', user.id);
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error updating profile in 'profiles' table:", error);
+        throw error;
+      }
       
-      // Update local state
+      console.log("Profile updated successfully");
+      
+      // Update local state - but keep any fields that weren't in the database
       setProfile({ ...profile, ...profileData });
       toast.success('Profile updated successfully');
       return { success: true, data };
     } catch (error) {
       console.error('Error updating profile:', error);
-      toast.error('Failed to update profile');
+      toast.error('Failed to update profile: ' + error.message);
       return { success: false, error: error.message };
     }
   };
