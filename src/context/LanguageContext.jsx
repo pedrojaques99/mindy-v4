@@ -67,27 +67,33 @@ export const LanguageProvider = ({ children }) => {
     const initLanguage = async () => {
       try {
         setLoading(true);
+        let selectedLang = languages.en;
         
-        // Check user preference first if logged in
-        if (profile?.language) {
-          const userLang = profile.language;
-          const selectedLang = languages[userLang] || languages.en;
-          const langTranslations = await loadTranslations(selectedLang.code);
-          
-          setCurrentLanguage(selectedLang);
-          setTranslations(langTranslations);
-        } else {
-          // Use browser language as fallback
-          const browserLang = navigator.language.split('-')[0];
-          const selectedLang = languages[browserLang] || languages.en;
-          const langTranslations = await loadTranslations(selectedLang.code);
-          
-          setCurrentLanguage(selectedLang);
-          setTranslations(langTranslations);
+        // First check user profile if logged in
+        if (profile?.language && languages[profile.language]) {
+          selectedLang = languages[profile.language];
         }
+        // Then check localStorage
+        else if (!user) {
+          const storedLang = localStorage.getItem('preferredLanguage');
+          if (storedLang && languages[storedLang]) {
+            selectedLang = languages[storedLang];
+          }
+          // Finally, try browser language
+          else {
+            const browserLang = navigator.language.split('-')[0];
+            if (languages[browserLang]) {
+              selectedLang = languages[browserLang];
+            }
+          }
+        }
+        
+        const langTranslations = await loadTranslations(selectedLang.code);
+        setCurrentLanguage(selectedLang);
+        setTranslations(langTranslations);
       } catch (error) {
         console.error('Error initializing language:', error);
-        // Default to English
+        // Default to English on error
         const langTranslations = await loadTranslations('en');
         setCurrentLanguage(languages.en);
         setTranslations(langTranslations);
@@ -97,7 +103,7 @@ export const LanguageProvider = ({ children }) => {
     };
 
     initLanguage();
-  }, [profile]);
+  }, [profile, user]);
 
   // Change language function
   const changeLanguage = async (langCode) => {
@@ -114,10 +120,10 @@ export const LanguageProvider = ({ children }) => {
       // Update user preference in Supabase if logged in
       if (user) {
         await updateUserProfile({ language: langCode });
-      } else {
-        // Store in localStorage for non-logged in users
-        localStorage.setItem('preferredLanguage', langCode);
       }
+      
+      // Always store in localStorage for persistence
+      localStorage.setItem('preferredLanguage', langCode);
     } catch (error) {
       console.error('Error changing language:', error);
     } finally {
@@ -127,6 +133,7 @@ export const LanguageProvider = ({ children }) => {
 
   // Translate function
   const t = (key, defaultText = key) => {
+    if (loading) return defaultText;
     return translations[key] || defaultText;
   };
 

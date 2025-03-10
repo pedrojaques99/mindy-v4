@@ -46,8 +46,6 @@ const LanguageSwitcher = () => {
         aria-label="Select language"
       >
         {getFlagComponent(currentLanguage.code)}
-        <span className="sr-only md:not-sr-only md:inline-block text-sm">{currentLanguage.name}</span>
-        
         <svg 
           className={`h-4 w-4 transition-transform ${isOpen ? 'rotate-180' : ''}`} 
           xmlns="http://www.w3.org/2000/svg" 
@@ -63,17 +61,17 @@ const LanguageSwitcher = () => {
       </button>
       
       {isOpen && (
-        <div className="absolute right-0 mt-1 w-40 glass-card py-1 border-glass-300/50 rounded-md shadow-xl z-50">
+        <div className="absolute right-0 mt-1 glass-card py-1 border-glass-300/50 rounded-md shadow-xl z-50">
           {Object.values(languages).map((lang) => (
             <button
               key={lang.code}
               onClick={() => handleLanguageChange(lang.code)}
-              className={`flex items-center gap-2 w-full px-3 py-2 text-left text-white/70 hover:text-lime-accent transition-colors duration-200 ${
-                currentLanguage.code === lang.code ? 'text-lime-accent' : ''
+              className={`flex items-center justify-center w-full px-3 py-2 hover:text-lime-accent transition-colors duration-200 ${
+                currentLanguage.code === lang.code ? 'text-lime-accent bg-dark-300/50' : 'text-white/70'
               }`}
+              aria-label={`Switch to ${lang.name}`}
             >
               {getFlagComponent(lang.code)}
-              <span>{lang.name}</span>
             </button>
           ))}
         </div>

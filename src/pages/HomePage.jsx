@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '../main';
 import { useUser } from '../context/UserContext';
+import { useLanguage } from '../context/LanguageContext';
 import SearchBar from '../components/SearchBar';
 import GlassCard from '../components/ui/GlassCard';
 import ResourceSkeleton from '../components/ui/ResourceSkeleton';
@@ -110,6 +111,7 @@ const POPULAR_TAGS = [
 
 const HomePage = () => {
   const { user } = useUser();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestedTags, setSuggestedTags] = useState([]);
@@ -460,10 +462,10 @@ const HomePage = () => {
             transition={{ duration: 0.6 }}
           >
             <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white drop-shadow-md">
-              Discover <span className="text-[#bfff58] drop-shadow-lg">Creative Resources</span> for Your Projects
+              {t('home.hero.title', 'Discover')} <span className="text-[#bfff58] drop-shadow-lg">{t('home.hero.titleHighlight', 'Creative Resources')}</span> {t('home.hero.titleEnd', 'for Your Projects')}
             </h1>
             <p className="text-lg text-gray-300 mb-8 drop-shadow-sm">
-              Find the best tools, assets, and inspiration for designers, developers, and creators.
+              {t('home.hero.subtitle', 'Find the best tools, assets, and inspiration for designers, developers, and creators.')}
             </p>
             
             {/* Search Bar */}
@@ -473,7 +475,7 @@ const HomePage = () => {
                   type="text"
                   value={searchQuery}
                   onChange={handleSearchChange}
-                  placeholder="Search for resources, tools, or inspiration..."
+                  placeholder={t('home.search.placeholder', 'Search for resources, tools, or inspiration...')}
                   className="w-full py-4 px-5 pr-12 rounded-xl bg-dark-200/80 backdrop-blur-sm border border-dark-300 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#bfff58]/30 focus:border-[#bfff58]/50 transition-all"
                 />
                 <button 
@@ -511,7 +513,7 @@ const HomePage = () => {
             
             {/* Popular tags */}
             <div className="flex flex-wrap justify-center gap-2">
-              <span className="text-sm text-gray-400">Popular:</span>
+              <span className="text-sm text-gray-400">{t('home.popular.label', 'Popular')}:</span>
               {POPULAR_TAGS.slice(0, 6).map((tag) => (
                 <button
                   key={tag}
@@ -526,13 +528,13 @@ const HomePage = () => {
         </div>
       </section>
       
-      <SectionDivider label="Filter Resources" />
+      <SectionDivider label={t('home.sections.filterResources', 'Filter Resources')} />
       
       {/* Selected Filters */}
       {Object.values(selectedFilters).some(Boolean) && (
         <div className="container mx-auto px-4 mb-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-sm text-gray-400">Active filters:</span>
+            <span className="text-sm text-gray-400">{t('home.filters.activeLabel', 'Active filters')}:</span>
             {Object.entries(selectedFilters).map(([type, value]) => {
               if (!value) return null;
               
@@ -574,7 +576,7 @@ const HomePage = () => {
               className="text-xs text-gray-400 hover:text-white ml-2 flex items-center"
             >
               <XIcon className="h-3 w-3 mr-1" />
-              Clear all
+              {t('home.filters.clearAll', 'Clear all')}
             </button>
           </div>
         </div>
@@ -585,7 +587,7 @@ const HomePage = () => {
         {Object.entries(categories).map(([categoryId, category]) => (
           <div key={categoryId} className="mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-medium text-white/90 uppercase tracking-wider">{category.name}</h4>
+              <h4 className="text-sm font-medium text-white/90 uppercase tracking-wider">{t(`categories.${categoryId}`, category.name)}</h4>
               <span className="text-xs px-2 py-0.5 rounded-full bg-dark-300/80 text-gray-400">{category.count}</span>
             </div>
             
@@ -602,7 +604,7 @@ const HomePage = () => {
                 >
                   <div className="flex items-center">
                     <span className="mr-2 text-lg" role="img" aria-label={subcategory.name}>{subcategory.emoji}</span>
-                    <span className="text-sm">{subcategory.name}</span>
+                    <span className="text-sm">{t(`subcategories.${subcategory.id}`, subcategory.name)}</span>
                   </div>
                   <span className="text-xs px-1.5 py-0.5 rounded-full bg-dark-300/80 text-gray-400">{subcategory.count}</span>
                 </button>
@@ -615,7 +617,7 @@ const HomePage = () => {
       {/* Software Filter */}
       <section className="container mx-auto px-4 mb-8">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-white/90 uppercase tracking-wider">Software</h3>
+          <h3 className="text-sm font-medium text-white/90 uppercase tracking-wider">{t('home.sections.software', 'Software')}</h3>
           <span className="text-xs px-2 py-0.5 rounded-full bg-dark-300/80 text-gray-400">{softwareCategories.reduce((sum, sw) => sum + sw.count, 0)}</span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
@@ -648,8 +650,8 @@ const HomePage = () => {
               </div>
               <span className={`text-xs ${
                 selectedFilters.software === software.id ? 'text-[#bfff58]' : 'text-gray-300'
-              } transition-colors`}>
-                {software.name}
+              }`}>
+                {t(`software.${software.id}`, software.name)}
               </span>
               <span className="absolute top-1 right-1 text-xs px-1.5 py-0.5 rounded-full bg-dark-300/80 text-gray-400">
                 {software.count}
@@ -659,7 +661,7 @@ const HomePage = () => {
         </div>
       </section>
       
-      <SectionDivider label="Trending Resources" />
+      <SectionDivider label={t('home.sections.trendingResources', 'Trending Resources')} />
       
       {/* Trending Resources */}
       {trendingResources.length > 0 && (
@@ -668,10 +670,10 @@ const HomePage = () => {
             <div className="flex items-center mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
                 <FireIcon className="w-6 h-6 mr-2 text-[#bfff58]" />
-                Trending Resources
+                {t('home.sections.trendingResources', 'Trending Resources')}
               </h2>
               <Link to="/category/all?sort=trending" className="ml-auto text-sm text-[#bfff58] hover:underline flex items-center">
-                View all <ChevronRightIcon className="w-4 h-4 ml-1" />
+                {t('common.viewAll', 'View all')} <ChevronRightIcon className="w-4 h-4 ml-1" />
               </Link>
             </div>
             
@@ -697,10 +699,10 @@ const HomePage = () => {
             <div className="flex items-center mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
                 <ClockIcon className="w-6 h-6 mr-2 text-[#bfff58]" />
-                Recent Uploads
+                {t('home.sections.recentUploads', 'Recent Uploads')}
               </h2>
               <Link to="/category/all?sort=newest" className="ml-auto text-sm text-[#bfff58] hover:underline flex items-center">
-                View all <ChevronRightIcon className="w-4 h-4 ml-1" />
+                {t('common.viewAll', 'View all')} <ChevronRightIcon className="w-4 h-4 ml-1" />
               </Link>
             </div>
             
@@ -726,10 +728,10 @@ const HomePage = () => {
             <div className="flex items-center mb-6">
               <h2 className="text-2xl font-bold text-white flex items-center">
                 <HeartIcon className="w-6 h-6 mr-2 text-[#bfff58]" />
-                Most Liked Resources
+                {t('home.sections.mostLiked', 'Most Liked Resources')}
               </h2>
               <Link to="/category/all?sort=popular" className="ml-auto text-sm text-[#bfff58] hover:underline flex items-center">
-                View all <ChevronRightIcon className="w-4 h-4 ml-1" />
+                {t('common.viewAll', 'View all')} <ChevronRightIcon className="w-4 h-4 ml-1" />
               </Link>
             </div>
             

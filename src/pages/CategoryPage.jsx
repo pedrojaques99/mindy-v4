@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { supabase } from '../main';
+import { useLanguage } from '../context/LanguageContext';
 import SearchBar from '../components/SearchBar';
 import FilterTags from '../components/FilterTags';
 import ResourceCard from '../components/ResourceCard';
@@ -12,6 +13,7 @@ const CategoryPage = () => {
   const { category } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const { t } = useLanguage();
   const [categoryData, setCategoryData] = useState(null);
   const [resources, setResources] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -407,13 +409,13 @@ const CategoryPage = () => {
           className="flex items-center text-gray-400 hover:text-lime-accent transition-colors mr-4"
         >
           <ArrowLeftIcon className="h-4 w-4 mr-1" />
-          <span>Back</span>
+          <span>{t('common.back', 'Back')}</span>
         </button>
         
         <div className="flex items-center text-gray-400">
           <Link to="/" className="flex items-center hover:text-lime-accent transition-colors">
             <HomeIcon className="h-4 w-4 mr-1" />
-            <span>Home</span>
+            <span>{t('common.home', 'Home')}</span>
           </Link>
           
           <ChevronRightIcon className="h-3 w-3 mx-2" />
@@ -424,7 +426,7 @@ const CategoryPage = () => {
               category === 'all' && !selectedSubcategory ? 'text-lime-accent' : ''
             }`}
           >
-            Resources
+            {t('common.resources', 'Resources')}
           </Link>
           
           {category !== 'all' && (
@@ -436,7 +438,7 @@ const CategoryPage = () => {
                   !selectedSubcategory ? 'text-lime-accent' : ''
                 }`}
               >
-                {categoryData?.name || category}
+                {t(`categories.${category}`, categoryData?.name || category)}
               </Link>
             </>
           )}
@@ -444,7 +446,7 @@ const CategoryPage = () => {
           {selectedSubcategory && (
             <>
               <ChevronRightIcon className="h-3 w-3 mx-2" />
-              <span className="text-lime-accent">{selectedSubcategory}</span>
+              <span className="text-lime-accent">{t(`subcategories.${selectedSubcategory}`, selectedSubcategory)}</span>
             </>
           )}
         </div>
