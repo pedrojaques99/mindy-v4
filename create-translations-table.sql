@@ -105,10 +105,26 @@ INSERT INTO translations (language, key, value) VALUES
 ('en', 'home.sections.trendingResources', 'Trending Resources'),
 ('en', 'home.sections.recentUploads', 'Recent Uploads'),
 ('en', 'home.sections.mostLiked', 'Most Liked Resources'),
+('en', 'home.sections.trending', 'Trending Now'),
+('en', 'home.sections.recent', 'Recently Added'),
+('en', 'home.sections.popular', 'Most Popular'),
+('en', 'home.sections.viewAll', 'View All'),
+('en', 'home.sections.loading', 'Loading resources...'),
+('en', 'home.sections.error', 'Error loading resources'),
+('en', 'home.sections.empty', 'No resources found'),
 
 -- Homepage Filters
 ('en', 'home.filters.activeLabel', 'Active filters'),
 ('en', 'home.filters.clearAll', 'Clear all'),
+('en', 'home.filters.title', 'Filter Resources'),
+('en', 'home.filters.category', 'Category'),
+('en', 'home.filters.subcategory', 'Subcategory'),
+('en', 'home.filters.software', 'Software'),
+('en', 'home.filters.clear', 'Clear filters'),
+('en', 'home.filters.apply', 'Apply filters'),
+('en', 'home.filters.noResults', 'No resources found with selected filters'),
+('en', 'home.filters.selected', 'Selected filters'),
+('en', 'home.filters.remove', 'Remove filter'),
 
 -- Categories
 ('en', 'categories.assets', 'Assets'),
@@ -117,6 +133,15 @@ INSERT INTO translations (language, key, value) VALUES
 ('en', 'categories.reference', 'Reference'),
 ('en', 'categories.inspiration', 'Inspiration'),
 ('en', 'categories.learn', 'Learn'),
+
+-- Home Page Categories
+('en', 'home.categories.all', 'All Categories'),
+('en', 'home.categories.assets', 'Assets'),
+('en', 'home.categories.tools', 'Tools'),
+('en', 'home.categories.community', 'Community'),
+('en', 'home.categories.reference', 'Reference'),
+('en', 'home.categories.inspiration', 'Inspiration'),
+('en', 'home.categories.learn', 'Learn'),
 
 -- Subcategories
 ('en', 'subcategories.fonts', 'Fonts'),
@@ -190,6 +215,42 @@ INSERT INTO translations (language, key, value) VALUES
 ('en', 'tags.all', 'All'),
 ('en', 'tags.other', 'Other'),
 
+-- Home Page Tags
+('en', 'home.tags.popular', 'Popular tags'),
+('en', 'home.tags.trending', 'Trending tags'),
+('en', 'home.tags.all', 'All tags'),
+('en', 'home.tags.more', 'More tags'),
+('en', 'home.tags.selected', 'Selected tags'),
+('en', 'home.tags.clear', 'Clear tags'),
+
+-- Home Page Stats
+('en', 'home.stats.resources', 'Resources'),
+('en', 'home.stats.categories', 'Categories'),
+('en', 'home.stats.users', 'Users'),
+
+-- Additional UI Elements
+('en', 'ui.loading', 'Loading...'),
+('en', 'ui.error', 'Error'),
+('en', 'ui.empty', 'No items found'),
+('en', 'ui.more', 'Show more'),
+('en', 'ui.less', 'Show less'),
+('en', 'ui.close', 'Close'),
+('en', 'ui.open', 'Open'),
+('en', 'ui.select', 'Select'),
+('en', 'ui.selected', 'Selected'),
+('en', 'ui.clear', 'Clear'),
+('en', 'ui.apply', 'Apply'),
+('en', 'ui.cancel', 'Cancel'),
+('en', 'ui.confirm', 'Confirm'),
+('en', 'ui.save', 'Save'),
+('en', 'ui.delete', 'Delete'),
+('en', 'ui.edit', 'Edit'),
+('en', 'ui.add', 'Add'),
+('en', 'ui.remove', 'Remove'),
+('en', 'ui.search', 'Search'),
+('en', 'ui.filter', 'Filter'),
+('en', 'ui.sort', 'Sort'),
+
 -- Portuguese translations
 ('pt-BR', 'common.home', 'Início'),
 ('pt-BR', 'common.favorites', 'Favoritos'),
@@ -225,10 +286,26 @@ INSERT INTO translations (language, key, value) VALUES
 ('pt-BR', 'home.sections.trendingResources', 'Em Destaque'),
 ('pt-BR', 'home.sections.recentUploads', 'Adicionados Recentemente'),
 ('pt-BR', 'home.sections.mostLiked', 'Mais Curtidos'),
+('pt-BR', 'home.sections.trending', 'Em Alta'),
+('pt-BR', 'home.sections.recent', 'Adicionados Recentemente'),
+('pt-BR', 'home.sections.popular', 'Mais Populares'),
+('pt-BR', 'home.sections.viewAll', 'Ver Todos'),
+('pt-BR', 'home.sections.loading', 'Carregando recursos...'),
+('pt-BR', 'home.sections.error', 'Erro ao carregar recursos'),
+('pt-BR', 'home.sections.empty', 'Nenhum recurso encontrado'),
 
 -- Homepage Filters
 ('pt-BR', 'home.filters.activeLabel', 'Filtros ativos'),
 ('pt-BR', 'home.filters.clearAll', 'Limpar tudo'),
+('pt-BR', 'home.filters.title', 'Filtrar Recursos'),
+('pt-BR', 'home.filters.category', 'Categoria'),
+('pt-BR', 'home.filters.subcategory', 'Subcategoria'),
+('pt-BR', 'home.filters.software', 'Software'),
+('pt-BR', 'home.filters.clear', 'Limpar filtros'),
+('pt-BR', 'home.filters.apply', 'Aplicar filtros'),
+('pt-BR', 'home.filters.noResults', 'Nenhum recurso encontrado com os filtros selecionados'),
+('pt-BR', 'home.filters.selected', 'Filtros selecionados'),
+('pt-BR', 'home.filters.remove', 'Remover filtro'),
 
 -- Categories
 ('pt-BR', 'categories.assets', 'Recursos'),
@@ -237,6 +314,15 @@ INSERT INTO translations (language, key, value) VALUES
 ('pt-BR', 'categories.reference', 'Referências'),
 ('pt-BR', 'categories.inspiration', 'Inspiração'),
 ('pt-BR', 'categories.learn', 'Aprendizado'),
+
+-- Home Page Categories
+('pt-BR', 'home.categories.all', 'Todas as Categorias'),
+('pt-BR', 'home.categories.assets', 'Recursos'),
+('pt-BR', 'home.categories.tools', 'Ferramentas'),
+('pt-BR', 'home.categories.community', 'Comunidade'),
+('pt-BR', 'home.categories.reference', 'Referências'),
+('pt-BR', 'home.categories.inspiration', 'Inspiração'),
+('pt-BR', 'home.categories.learn', 'Aprendizado'),
 
 -- Subcategories
 ('pt-BR', 'subcategories.fonts', 'Fontes'),
@@ -308,7 +394,43 @@ INSERT INTO translations (language, key, value) VALUES
 ('pt-BR', 'tags.popular', 'Popular'),
 ('pt-BR', 'tags.recommended', 'Recomendado'),
 ('pt-BR', 'tags.all', 'Todos'),
-('pt-BR', 'tags.other', 'Outros')
+('pt-BR', 'tags.other', 'Outros'),
+
+-- Home Page Tags
+('pt-BR', 'home.tags.popular', 'Tags populares'),
+('pt-BR', 'home.tags.trending', 'Tags em alta'),
+('pt-BR', 'home.tags.all', 'Todas as tags'),
+('pt-BR', 'home.tags.more', 'Mais tags'),
+('pt-BR', 'home.tags.selected', 'Tags selecionadas'),
+('pt-BR', 'home.tags.clear', 'Limpar tags'),
+
+-- Home Page Stats
+('pt-BR', 'home.stats.resources', 'Recursos'),
+('pt-BR', 'home.stats.categories', 'Categorias'),
+('pt-BR', 'home.stats.users', 'Usuários'),
+
+-- Additional UI Elements
+('pt-BR', 'ui.loading', 'Carregando...'),
+('pt-BR', 'ui.error', 'Erro'),
+('pt-BR', 'ui.empty', 'Nenhum item encontrado'),
+('pt-BR', 'ui.more', 'Mostrar mais'),
+('pt-BR', 'ui.less', 'Mostrar menos'),
+('pt-BR', 'ui.close', 'Fechar'),
+('pt-BR', 'ui.open', 'Abrir'),
+('pt-BR', 'ui.select', 'Selecionar'),
+('pt-BR', 'ui.selected', 'Selecionado'),
+('pt-BR', 'ui.clear', 'Limpar'),
+('pt-BR', 'ui.apply', 'Aplicar'),
+('pt-BR', 'ui.cancel', 'Cancelar'),
+('pt-BR', 'ui.confirm', 'Confirmar'),
+('pt-BR', 'ui.save', 'Salvar'),
+('pt-BR', 'ui.delete', 'Excluir'),
+('pt-BR', 'ui.edit', 'Editar'),
+('pt-BR', 'ui.add', 'Adicionar'),
+('pt-BR', 'ui.remove', 'Remover'),
+('pt-BR', 'ui.search', 'Pesquisar'),
+('pt-BR', 'ui.filter', 'Filtrar'),
+('pt-BR', 'ui.sort', 'Ordenar')
 
 ON CONFLICT (language, key) DO UPDATE 
 SET value = EXCLUDED.value,
