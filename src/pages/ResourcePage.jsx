@@ -14,6 +14,7 @@ import {
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/solid';
 import { supabase } from '../main';
 import { useUser } from '../context/UserContext';
+import { useLanguage } from '../context/LanguageContext';
 import SoftwareIcon from '../components/ui/SoftwareIcon';
 import AutoThumbnail from '../components/ui/AutoThumbnail';
 import CommentSection from '../components/CommentSection';
@@ -27,6 +28,7 @@ export default function ResourcePage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { user } = useUser();
+  const { t } = useLanguage();
   const [resource, setResource] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFavorited, setIsFavorited] = useState(false);
@@ -188,7 +190,7 @@ export default function ResourcePage() {
   // Toggle favorite
   const toggleFavorite = async () => {
     if (!user) {
-      toast('Please sign in to save favorites', { icon: '🔒' });
+      toast(t('auth.signInRequired'), { icon: '🔒' });
       return;
     }
     
@@ -205,7 +207,7 @@ export default function ResourcePage() {
         if (error) throw error;
         
         setIsFavorited(false);
-        toast('Removed from favorites', { icon: '💔' });
+        toast(t('resource.removedFromFavorites'), { icon: '💔' });
       } else {
         const { error } = await supabase
           .from('favorites')
@@ -216,11 +218,11 @@ export default function ResourcePage() {
         if (error) throw error;
         
         setIsFavorited(true);
-        toast('Added to favorites', { icon: '❤️' });
+        toast(t('resource.addedToFavorites'), { icon: '❤️' });
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      toast.error('Failed to update favorites');
+      toast.error(t('common.error'));
     } finally {
       setIsLoadingFavorite(false);
     }
@@ -238,11 +240,11 @@ export default function ResourcePage() {
       })
       .catch(() => {
         navigator.clipboard.writeText(shareUrl);
-        toast('Link copied to clipboard', { icon: '📋' });
+        toast(t('resource.share.copied'), { icon: '📋' });
       });
     } else {
       navigator.clipboard.writeText(shareUrl);
-      toast('Link copied to clipboard', { icon: '📋' });
+      toast(t('resource.share.copied'), { icon: '📋' });
     }
   };
   
@@ -299,13 +301,14 @@ export default function ResourcePage() {
   if (!resource) {
     return (
       <div className="container mx-auto px-4 py-16 min-h-screen flex flex-col items-center justify-center">
-        <h1 className="text-2xl font-bold text-white mb-4">Resource not found</h1>
+        <h1 className="text-2xl font-bold text-white mb-4">{t('errors.resourceNotFound')}</h1>
+        <p className="text-gray-400 mb-8">{t('errors.resourceNotFoundDesc')}</p>
         <button 
-          onClick={handleBack}
+          onClick={() => navigate('/')}
           className="px-4 py-2 bg-dark-300 text-white rounded-md flex items-center"
         >
           <ArrowLeftIcon className="w-4 h-4 mr-2" />
-          Go back
+          {t('common.backToHome')}
         </button>
       </div>
     );
@@ -314,19 +317,57 @@ export default function ResourcePage() {
   return (
     <>
       <Helmet>
-        <title>{resource.title} - Resource Details</title>
+        <title>{resource.title} - Mindy</title>
         <meta name="description" content={resource.description} />
       </Helmet>
       
       <div className="container mx-auto px-4 py-6 md:py-12">
         {/* Back button */}
-        <button 
-          onClick={handleBack}
-          className="mb-6 px-4 py-2 bg-dark-300 text-white rounded-md flex items-center hover:bg-dark-400 transition-colors"
-        >
-          <ArrowLeftIcon className="w-4 h-4 mr-2" />
-          Back
-        </button>
+        <div className="flex items-center justify-between mb-8">
+          <button 
+            onClick={handleBack}
+            className="flex items-center text-gray-400 hover:text-white transition-colors"
+          >
+            <ArrowLeftIcon className="w-5 h-5 mr-2" />
+            {t('common.back')}
+          </button>
+          
+          <div className="flex items-center space-x-4">
+            <button 
+              onClick={toggleFavorite}
+              disabled={isLoadingFavorite}
+              className="flex items-center px-4 py-2 rounded-lg bg-dark-800 hover:bg-dark-700 transition-colors"
+              aria-label={t(isFavorited ? 'resource.removeFavorite' : 'resource.addFavorite')}
+            >
+              {isFavorited ? (
+                <HeartSolidIcon className="w-5 h-5 text-red-500 mr-2" />
+              ) : (
+                <HeartIcon className="w-5 h-5 text-gray-400 mr-2" />
+              )}
+              {t(isFavorited ? 'resource.saved' : 'resource.save')}
+            </button>
+            
+            <button 
+              onClick={shareResource}
+              className="flex items-center px-4 py-2 rounded-lg bg-dark-800 hover:bg-dark-700 transition-colors"
+              aria-label={t('resource.share')}
+            >
+              <ShareIcon className="w-5 h-5 text-gray-400 mr-2" />
+              {t('resource.share')}
+            </button>
+            
+            <a
+              href={resource.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={openExternalUrl}
+              className="flex items-center px-4 py-2 rounded-lg bg-lime-accent text-dark-900 hover:bg-lime-accent/90 transition-colors"
+            >
+              <ExternalLinkIcon className="w-5 h-5 mr-2" />
+              {t('resource.visit')}
+            </a>
+          </div>
+        </div>
         
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main content */}
@@ -408,7 +449,7 @@ export default function ResourcePage() {
                   }`}
                   onClick={() => handleTabChange('details')}
                 >
-                  Details
+                  {t('resource.details')}
                 </button>
                 <button
                   className={`flex-1 py-4 text-center text-sm font-medium ${
@@ -418,7 +459,7 @@ export default function ResourcePage() {
                   }`}
                   onClick={() => handleTabChange('comments')}
                 >
-                  Comments {comments.length > 0 && `(${comments.length})`}
+                  {t('resource.comments')} ({comments.length})
                 </button>
               </div>
               
@@ -429,7 +470,7 @@ export default function ResourcePage() {
                     {/* Description */}
                     {resource.description && (
                       <div>
-                        <h2 className="text-xl font-medium mb-4 text-white">Description</h2>
+                        <h2 className="text-xl font-medium mb-4 text-white">{t('resource.description')}</h2>
                         <p className="text-gray-300 leading-relaxed">{resource.description}</p>
                       </div>
                     )}
@@ -439,7 +480,7 @@ export default function ResourcePage() {
                       <div>
                         <h2 className="text-lg font-medium mb-4 text-white flex items-center">
                           <TagIcon className="w-5 h-5 mr-2 text-gray-400" />
-                          Tags
+                          {t('resource.tags')}
                         </h2>
                         <div className="flex flex-wrap gap-3">
                           {resource.tags.map((tag) => (
@@ -463,7 +504,7 @@ export default function ResourcePage() {
                       {/* Categories */}
                       {(resource.category || resource.subcategory) && (
                         <div>
-                          <h2 className="text-lg font-medium mb-4 text-white">Categories</h2>
+                          <h2 className="text-lg font-medium mb-4 text-white">{t('resource.category')}</h2>
                           <div className="flex flex-wrap gap-3">
                             {resource.category && (
                               <button
@@ -488,25 +529,25 @@ export default function ResourcePage() {
                       
                       {/* Metadata */}
                       <div>
-                        <h2 className="text-lg font-medium mb-4 text-white">Details</h2>
+                        <h2 className="text-lg font-medium mb-4 text-white">{t('resource.details')}</h2>
                         <ul className="space-y-4 text-sm text-gray-300">
                           {resource.created_at && (
                             <li className="flex items-center">
                               <ClockIcon className="w-5 h-5 mr-3 text-gray-400" />
-                              <span>Added: {new Date(resource.created_at).toLocaleDateString()}</span>
+                              <span>{t('resource.date')}: {new Date(resource.created_at).toLocaleDateString()}</span>
                             </li>
                           )}
                           
                           {resource.author && (
                             <li className="flex items-center">
                               <UserIcon className="w-5 h-5 mr-3 text-gray-400" />
-                              <span>Author: {resource.author}</span>
+                              <span>{t('resource.author')}: {resource.author}</span>
                             </li>
                           )}
                           
                           <li className="flex items-center">
                             <ThumbUpIcon className="w-5 h-5 mr-3 text-gray-400" />
-                            <span>Popularity: {resource.popularity || 0}</span>
+                            <span>{t('resource.likes')}: {resource.likes_count || 0}</span>
                           </li>
                           
                           {resource.url && (
@@ -544,13 +585,13 @@ export default function ResourcePage() {
           <div className="lg:col-span-1">
             {/* Related resources */}
             <div className="bg-dark-200 rounded-xl overflow-hidden shadow-xl p-6">
-              <h2 className="text-lg font-medium mb-4 text-white">Related Resources</h2>
+              <h2 className="text-lg font-medium mb-4 text-white">{t('resource.related')}</h2>
               {relatedResources.length > 0 ? (
                 <div className="space-y-4">
                   <RelatedResources resources={relatedResources} />
                 </div>
               ) : (
-                <p className="text-gray-400">No related resources found</p>
+                <p className="text-gray-400">{t('resource.noRelated')}</p>
               )}
             </div>
           </div>

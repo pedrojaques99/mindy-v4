@@ -4,6 +4,7 @@ import { HeartIcon, ShareIcon, ExternalLinkIcon, ChatAltIcon } from '@heroicons/
 import { HeartIcon as HeartSolidIcon } from '@heroicons/react/solid';
 import { supabase } from '../main';
 import { useUser } from '../context/UserContext';
+import { useLanguage } from '../context/LanguageContext';
 import toast from 'react-hot-toast';
 import GlassCard from './ui/GlassCard';
 import AutoThumbnail from './ui/AutoThumbnail';
@@ -12,6 +13,7 @@ import { getWebsiteThumbnail, getWebsiteFavicon } from '../utils/thumbnailUtils'
 
 export default function ResourceCard({ resource, delay = 0 }) {
   const { user } = useUser();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [isFavorited, setIsFavorited] = useState(resource?.favorited || false);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,7 +90,7 @@ export default function ResourceCard({ resource, delay = 0 }) {
     e.stopPropagation();
     
     if (!user) {
-      toast('Please sign in to save favorites', { icon: '🔒' });
+      toast(t('auth.signInRequired'), { icon: '🔒' });
       return;
     }
     
@@ -106,7 +108,7 @@ export default function ResourceCard({ resource, delay = 0 }) {
         if (error) throw error;
         
         setIsFavorited(false);
-        toast('Removed from favorites', { icon: '💔' });
+        toast(t('resource.removedFromFavorites'), { icon: '💔' });
       } else {
         // Add to favorites
         const { error } = await supabase
@@ -118,11 +120,11 @@ export default function ResourceCard({ resource, delay = 0 }) {
         if (error) throw error;
         
         setIsFavorited(true);
-        toast('Added to favorites', { icon: '❤️' });
+        toast(t('resource.addedToFavorites'), { icon: '❤️' });
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      toast.error('Failed to update favorites');
+      toast.error(t('common.error'));
     } finally {
       setIsLoading(false);
     }
@@ -154,7 +156,7 @@ export default function ResourceCard({ resource, delay = 0 }) {
   // Copy to clipboard
   const copyToClipboard = (text) => {
     navigator.clipboard.writeText(text);
-    toast('Link copied to clipboard', { icon: '📋' });
+    toast(t('resource.share.copied'), { icon: '📋' });
   };
   
   // Handle card click
@@ -243,6 +245,7 @@ export default function ResourceCard({ resource, delay = 0 }) {
       >
         <GlassCard 
           className="relative overflow-hidden transition-all duration-300 cursor-pointer h-full"
+          aria-label={t('resource.cardAriaLabel', { title: resource.title })}
         >
           <div 
             className="h-full w-full"
@@ -283,29 +286,29 @@ export default function ResourceCard({ resource, delay = 0 }) {
                   onClick={toggleFavorite}
                   disabled={isLoading}
                   className="p-1.5 rounded-full bg-dark-100/70 backdrop-blur-sm text-white/80 hover:text-lime-accent transition-colors duration-200"
-                  aria-label={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+                  aria-label={t(isFavorited ? 'resource.removeFavorite' : 'resource.addFavorite')}
                 >
                   {isFavorited ? (
-                    <HeartSolidIcon className="w-4 h-4 text-lime-accent" />
+                    <HeartSolidIcon className="w-4 h-4 text-red-500" />
                   ) : (
-                    <HeartIcon className="w-4 h-4" />
+                    <HeartIcon className="w-4 h-4 text-white" />
                   )}
                 </button>
                 
                 <button 
                   onClick={shareResource}
                   className="p-1.5 rounded-full bg-dark-100/70 backdrop-blur-sm text-white/80 hover:text-lime-accent transition-colors duration-200"
-                  aria-label="Share resource"
+                  aria-label={t('resource.share')}
                 >
-                  <ShareIcon className="w-4 h-4" />
+                  <ShareIcon className="w-4 h-4 text-white" />
                 </button>
                 
                 <button 
                   onClick={openExternalUrl}
                   className="p-1.5 rounded-full bg-dark-100/70 backdrop-blur-sm text-white/80 hover:text-lime-accent transition-colors duration-200"
-                  aria-label="Open external link"
+                  aria-label={t('resource.visit')}
                 >
-                  <ExternalLinkIcon className="w-4 h-4" />
+                  <ExternalLinkIcon className="w-4 h-4 text-white" />
                 </button>
               </div>
             </div>
