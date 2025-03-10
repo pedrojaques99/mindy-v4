@@ -26,6 +26,7 @@ import StatusPage from './pages/StatusPage';
 
 // Context
 import { UserProvider } from './context/UserContext';
+import { LanguageProvider } from './context/LanguageContext';
 
 // AnimatedRoutes component to handle route transitions
 const AnimatedRoutes = () => {
@@ -113,26 +114,28 @@ function App() {
 
   return (
     <UserProvider>
-      <HelmetProvider>
-        <BrowserRouter>
-          <div className="app-container min-h-screen flex flex-col grid-bg minimal-scrollbar">
-            <Navbar onOpenAuth={() => setShowAuthModal(true)} />
-            
-            <main id="main-content" className="flex-grow">
-              <AnimatedRoutes />
-            </main>
-            
-            <Footer />
-            
-            <AuthModal 
-              isOpen={showAuthModal} 
-              onClose={() => setShowAuthModal(false)} 
-            />
-            
-            <ScrollToTop />
-          </div>
-        </BrowserRouter>
-      </HelmetProvider>
+      <LanguageProvider>
+        <HelmetProvider>
+          <BrowserRouter>
+            <div className="app-container min-h-screen flex flex-col grid-bg minimal-scrollbar">
+              <Navbar onOpenAuth={() => setShowAuthModal(true)} />
+              
+              <main id="main-content" className="flex-grow">
+                <AnimatedRoutes />
+              </main>
+              
+              <Footer />
+              
+              <AuthModal 
+                isOpen={showAuthModal} 
+                onClose={() => setShowAuthModal(false)} 
+              />
+              
+              <ScrollToTop />
+            </div>
+          </BrowserRouter>
+        </HelmetProvider>
+      </LanguageProvider>
     </UserProvider>
   );
 }

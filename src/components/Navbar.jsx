@@ -1,10 +1,13 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
+import { useLanguage } from '../context/LanguageContext';
 import { SearchIcon } from '@heroicons/react/outline';
+import LanguageSwitcher from './LanguageSwitcher';
 
 const Navbar = ({ onOpenAuth }) => {
   const { user, signOut } = useUser();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -46,7 +49,7 @@ const Navbar = ({ onOpenAuth }) => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search resources..."
+              placeholder={t('common.search', 'Search resources...')}
               className="w-full py-1.5 px-4 pl-9 bg-dark-300/80 border border-glass-200/50 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-lime-accent/50 transition-all duration-200"
             />
             <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/40" />
@@ -56,14 +59,17 @@ const Navbar = ({ onOpenAuth }) => {
         {/* Desktop Navigation */}
         <nav className="hidden md:flex items-center space-x-6">
           <Link to="/" className="text-white/60 hover:text-lime-accent transition-colors duration-200">
-            Home
+            {t('common.home', 'Home')}
           </Link>
           <Link to="/favorites" className="text-white/60 hover:text-lime-accent transition-colors duration-200">
-            Favorites
+            {t('common.favorites', 'Favorites')}
           </Link>
           <Link to="/submit" className="text-white/60 hover:text-lime-accent transition-colors duration-200">
-            Submit
+            {t('common.submit', 'Submit')}
           </Link>
+          
+          {/* Language Switcher */}
+          <LanguageSwitcher />
           
           {user ? (
             <div className="relative">
@@ -80,16 +86,16 @@ const Navbar = ({ onOpenAuth }) => {
               {isMenuOpen && (
                 <div className="absolute right-0 mt-2 w-48 glass-card py-1 border-glass-300/50">
                   <Link to="/profile" className="block px-4 py-2 text-white/70 hover:text-lime-accent transition-colors duration-200">
-                    Profile
+                    {t('common.profile', 'Profile')}
                   </Link>
                   <Link to="/edit-profile" className="block px-4 py-2 text-white/70 hover:text-lime-accent transition-colors duration-200">
-                    Edit Profile
+                    {t('common.editProfile', 'Edit Profile')}
                   </Link>
                   <button 
                     onClick={handleSignOut}
                     className="block w-full text-left px-4 py-2 text-white/70 hover:text-lime-accent transition-colors duration-200"
                   >
-                    Sign Out
+                    {t('common.signOut', 'Sign Out')}
                   </button>
                 </div>
               )}
@@ -99,7 +105,7 @@ const Navbar = ({ onOpenAuth }) => {
               onClick={onOpenAuth}
               className="btn btn-primary"
             >
-              Sign In
+              {t('common.signIn', 'Sign In')}
             </button>
           )}
         </nav>
@@ -125,35 +131,40 @@ const Navbar = ({ onOpenAuth }) => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search resources..."
+                placeholder={t('common.search', 'Search resources...')}
                 className="w-full py-2 px-4 pl-9 bg-dark-300/80 border border-glass-200/50 rounded-full text-sm focus:outline-none focus:ring-1 focus:ring-lime-accent/50 transition-all duration-200"
               />
               <SearchIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-white/40" />
             </form>
             
             <Link to="/" className="py-2 text-white/60 hover:text-lime-accent transition-colors duration-200">
-              Home
+              {t('common.home', 'Home')}
             </Link>
             <Link to="/favorites" className="py-2 text-white/60 hover:text-lime-accent transition-colors duration-200">
-              Favorites
+              {t('common.favorites', 'Favorites')}
             </Link>
             <Link to="/submit" className="py-2 text-white/60 hover:text-lime-accent transition-colors duration-200">
-              Submit
+              {t('common.submit', 'Submit')}
             </Link>
+            
+            {/* Language Switcher - Mobile */}
+            <div className="py-2">
+              <LanguageSwitcher />
+            </div>
             
             {user ? (
               <>
                 <Link to="/profile" className="py-2 text-white/60 hover:text-lime-accent transition-colors duration-200">
-                  Profile
+                  {t('common.profile', 'Profile')}
                 </Link>
                 <Link to="/edit-profile" className="py-2 text-white/60 hover:text-lime-accent transition-colors duration-200">
-                  Edit Profile
+                  {t('common.editProfile', 'Edit Profile')}
                 </Link>
                 <button 
                   onClick={handleSignOut}
                   className="py-2 text-left text-white/60 hover:text-lime-accent transition-colors duration-200"
                 >
-                  Sign Out
+                  {t('common.signOut', 'Sign Out')}
                 </button>
               </>
             ) : (
@@ -161,7 +172,7 @@ const Navbar = ({ onOpenAuth }) => {
                 onClick={onOpenAuth}
                 className="py-2 text-left text-white/60 hover:text-lime-accent transition-colors duration-200"
               >
-                Sign In
+                {t('common.signIn', 'Sign In')}
               </button>
             )}
           </div>
