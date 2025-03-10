@@ -62,7 +62,7 @@ const ProfilePage = () => {
       
       if (result.success) {
         console.log('Sign out successful, navigating to home');
-        navigate('/');
+    navigate('/');
       } else {
         console.error('Sign out returned error:', result.error);
         toast.error(`Failed to sign out: ${result.error}`);
@@ -165,22 +165,22 @@ const ProfilePage = () => {
                 <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-0">
                   <span className="w-full md:w-1/3 text-white/60">Member since:</span>
                   <span className="md:w-2/3">
-                    {new Date(user.created_at).toLocaleDateString()}
-                  </span>
-                </div>
+                {new Date(user.created_at).toLocaleDateString()}
+              </span>
+            </div>
                 
                 <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-0">
                   <span className="w-full md:w-1/3 text-white/60">Username:</span>
                   <span className="md:w-2/3">
                     {profile?.username || 'Not set'}
                   </span>
-                </div>
-              </div>
-              
+          </div>
+        </div>
+        
               <div className="mt-6 pt-4 border-t border-dark-300">
-                <button 
-                  onClick={handleSignOut}
-                  className="btn btn-secondary"
+          <button 
+            onClick={handleSignOut}
+            className="btn btn-secondary"
                   disabled={signingOut}
                 >
                   {signingOut ? (
@@ -189,7 +189,7 @@ const ProfilePage = () => {
                       Signing Out...
                     </>
                   ) : 'Sign Out'}
-                </button>
+          </button>
               </div>
             </div>
           </div>
