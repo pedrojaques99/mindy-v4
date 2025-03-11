@@ -4,11 +4,13 @@ globs:
 alwaysApply: false
 ---
 
-# always use supabase data, try first mcp server
+# always use and respect supabase data, try first mcp server if works
 
 - VITE_SUPABASE_URL=https://bweemuqoelppnyeyeysr.supabase.co
 
 VITE_SUPABASE_ANON_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3ZWVtdXFvZWxwcG55ZXlleXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNjc4MDMsImV4cCI6MjA1Njg0MzgwM30.MlURpcY2M_kVmilyR0WBEyJe5rDjuVcg5e4gW8ke1g8
 
 VITE_SUPABASE_SERVICE_ROLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3ZWVtdXFvZWxwcG55ZXlleXNyIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MTI2NzgwMywiZXhwIjoyMDU2ODQzODAzfQ.AqsDfuI65BNiZuxdQ2kafrQ7a4vK2bU6YGiQdBcof_U
+
+
 

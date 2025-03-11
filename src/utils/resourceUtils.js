@@ -14,24 +14,81 @@ export const getResourceById = async (id) => {
 
   try {
     console.log(`Fetching resource with ID: ${id}`);
-    const { data, error } = await supabase
-      .from('resources')
-      .select('*')
-      .eq('id', id)
-      .single();
-
-    if (error) {
-      console.error('Error fetching resource:', error);
-      return { success: false, error };
+    
+    // Try with retries in case of network issues
+    const MAX_RETRIES = 2;
+    let attempt = 0;
+    let error;
+    
+    while (attempt <= MAX_RETRIES) {
+      try {
+        // First try with .single() - this is the preferred approach
+        const { data, error: fetchError } = await supabase
+          .from('resources')
+          .select('*')
+          .eq('id', id)
+          .single();
+          
+        if (fetchError) {
+          console.error(`Attempt ${attempt + 1}/${MAX_RETRIES + 1}: Error fetching resource with single():`, fetchError);
+          
+          // If we got a "Results not found" from single(), try another approach
+          if (fetchError.code === 'PGRST116') {
+            console.log('Resource not found with single(), trying alternative approach');
+            
+            // Try the alternative approach - getting as array and taking first element
+            const { data: arrayData, error: arrayError } = await supabase
+              .from('resources')
+              .select('*')
+              .eq('id', id);
+              
+            if (arrayError) {
+              console.error('Error with alternative fetch approach:', arrayError);
+              error = arrayError;
+            } else if (arrayData && arrayData.length > 0) {
+              console.log('Resource fetched successfully via array method:', arrayData[0]);
+              return { success: true, data: arrayData[0] };
+            } else {
+              console.log('Resource not found with either method');
+              return { success: false, message: 'Resource not found' };
+            }
+          } else {
+            error = fetchError;
+          }
+          
+          attempt++;
+          
+          if (attempt <= MAX_RETRIES) {
+            // Wait a bit before retrying (increasing delay with each attempt)
+            await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+            continue;
+          }
+          break;
+        }
+        
+        if (!data) {
+          console.log('Resource not found');
+          return { success: false, message: 'Resource not found' };
+        }
+        
+        console.log('Resource fetched successfully:', data);
+        return { success: true, data };
+      } catch (attemptError) {
+        console.error(`Attempt ${attempt + 1}/${MAX_RETRIES + 1}: Unexpected error:`, attemptError);
+        error = attemptError;
+        attempt++;
+        
+        if (attempt <= MAX_RETRIES) {
+          // Wait a bit before retrying
+          await new Promise(resolve => setTimeout(resolve, 500 * attempt));
+          continue;
+        }
+        break;
+      }
     }
-
-    if (!data) {
-      console.log('Resource not found');
-      return { success: false, message: 'Resource not found' };
-    }
-
-    console.log('Resource fetched successfully:', data);
-    return { success: true, data };
+    
+    // If we got here with an error, all attempts failed
+    return { success: false, error };
   } catch (error) {
     console.error('Unexpected error fetching resource:', error);
     return { success: false, error };

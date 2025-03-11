@@ -74,17 +74,48 @@ export default function ResourcePage() {
       setIsLoading(true);
       setError(null);
       
+      if (!id) {
+        console.error('Missing resource ID in URL');
+        setError(t('errors.missingId', 'Missing resource ID'));
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log(`ResourcePage: Loading resource with ID: ${id}`);
+      
       try {
         // Use our utility function to get the resource by ID
         const result = await getResourceById(id);
         
         if (!result.success) {
+          console.error('Error loading resource:', result.message || result.error);
           setError(result.message || t('errors.errorLoadingResource', 'Error loading resource'));
           setIsLoading(false);
           return;
         }
         
-        const resourceData = result.data;
+        let resourceData = result.data;
+        
+        // If resourceData is an array, take the first element
+        if (Array.isArray(resourceData)) {
+          console.log('Resource data came as array, taking first item:', resourceData);
+          if (resourceData.length > 0) {
+            resourceData = resourceData[0];
+          } else {
+            console.error('Resource data array is empty');
+            setError(t('errors.resourceNotFound', 'Resource not found'));
+            setIsLoading(false);
+            return;
+          }
+        }
+        
+        // Verify we have valid resource data
+        if (!resourceData || !resourceData.id) {
+          console.error('Invalid resource data returned from Supabase:', resourceData);
+          setError(t('errors.invalidData', 'Invalid resource data returned from database'));
+          setIsLoading(false);
+          return;
+        }
         
         console.log('Resource data loaded successfully:', resourceData);
         setResource(resourceData);
@@ -96,7 +127,11 @@ export default function ResourcePage() {
         
         // Track view
         if (user) {
-          trackResourceView(resourceData.id, user.id);
+          trackResourceView(resourceData.id, user.id)
+            .catch(error => {
+              // Just log tracking errors, don't block user experience
+              console.warn('Error tracking view (non-critical):', error);
+            });
         }
         
         // Check if favorited
@@ -158,6 +193,9 @@ export default function ResourcePage() {
     }
     
     try {
+      console.log(`Fetching related resources for: ${currentResource.title} (ID: ${currentResource.id})`);
+      
+      // Try to get resources in the same category first
       const { data, error } = await supabase
         .from('resources')
         .select('*')
@@ -165,13 +203,74 @@ export default function ResourcePage() {
         .neq('id', currentResource.id)
         .limit(4);
         
-      if (error) throw error;
+      if (error) {
+        console.error('Error fetching related resources by category:', error);
+        
+        // Fall back to get any resources as a backup
+        try {
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from('resources')
+            .select('*')
+            .neq('id', currentResource.id)
+            .limit(4);
+            
+          if (fallbackError) {
+            console.error('Error fetching fallback related resources:', fallbackError);
+            throw fallbackError;
+          }
+          
+          if (fallbackData && fallbackData.length > 0) {
+            console.log(`Fetched ${fallbackData.length} fallback related resources`);
+            setRelatedResources(fallbackData);
+            return;
+          }
+        } catch (fallbackError) {
+          console.error('Error in fallback related resources fetch:', fallbackError);
+          // Continue to throw the original error
+        }
+        
+        throw error;
+      }
       
-      if (data) {
+      if (data && data.length > 0) {
+        console.log(`Fetched ${data.length} related resources in category: ${currentResource.category}`);
         setRelatedResources(data);
+      } else {
+        // If no resources in the same category, try subcategory
+        if (currentResource.subcategory) {
+          const { data: subcategoryData, error: subcategoryError } = await supabase
+            .from('resources')
+            .select('*')
+            .eq('subcategory', currentResource.subcategory)
+            .neq('id', currentResource.id)
+            .limit(4);
+            
+          if (!subcategoryError && subcategoryData && subcategoryData.length > 0) {
+            console.log(`Fetched ${subcategoryData.length} related resources by subcategory`);
+            setRelatedResources(subcategoryData);
+            return;
+          }
+        }
+        
+        // If still no results, get any 4 resources
+        const { data: anyData, error: anyError } = await supabase
+          .from('resources')
+          .select('*')
+          .neq('id', currentResource.id)
+          .limit(4);
+          
+        if (!anyError && anyData && anyData.length > 0) {
+          console.log(`Fetched ${anyData.length} general related resources`);
+          setRelatedResources(anyData);
+        } else {
+          console.log('No related resources found');
+          setRelatedResources([]);
+        }
       }
     } catch (error) {
       console.error('Error fetching related resources:', error);
+      // Set empty array to avoid undefined errors
+      setRelatedResources([]);
     }
   };
   

@@ -217,8 +217,23 @@ export default function ResourceCard({ resource, delay = 0 }) {
   
   // Handle card click
   const handleCardClick = () => {
-    // Track view
-    trackView();
+    // Ensure we have a valid resource with an ID
+    if (!resource || !resource.id) {
+      console.error('Invalid resource object:', resource);
+      toast.error(t('errors.invalidResource', 'Invalid resource data'));
+      return;
+    }
+    
+    // Log the navigation for debugging
+    console.log(`Navigating to resource page for: ${resource.title} (ID: ${resource.id})`);
+    
+    // Track view - make sure this completes even if there's an error
+    try {
+      trackView();
+    } catch (error) {
+      console.error('Error tracking view:', error);
+      // Continue navigation even if tracking fails
+    }
     
     // Navigate to resource page
     navigate(`/resource/${resource.id}`);
