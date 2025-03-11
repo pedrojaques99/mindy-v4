@@ -546,18 +546,23 @@ export default function ResourcePage() {
                           {t('resource.tags')}
                         </h2>
                         <div className="flex flex-wrap gap-3">
-                          {resource.tags.map((tag) => (
-                            <button
-                              key={tag}
-                              onClick={() => handleTagClick(tag)}
-                              className="flex items-center px-4 py-2 rounded-md bg-dark-300 text-white hover:bg-dark-400 transition-colors text-sm"
-                            >
-                              {isSoftwareTag(tag) && (
-                                <SoftwareIcon name={tag} className="mr-2 w-4 h-4" />
-                              )}
-                              {tag}
-                            </button>
-                          ))}
+                          {resource.tags.map((tag) => {
+                            // Check if tag has a translation
+                            const translatedTag = t(`tags.${tag.toLowerCase()}`, tag);
+                            
+                            return (
+                              <button
+                                key={tag}
+                                onClick={() => handleTagClick(tag)}
+                                className="flex items-center px-4 py-2 rounded-md bg-dark-300 text-white hover:bg-dark-400 transition-colors text-sm"
+                              >
+                                {isSoftwareTag(tag) && (
+                                  <SoftwareIcon name={tag} className="mr-2 w-4 h-4" />
+                                )}
+                                {translatedTag}
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     )}

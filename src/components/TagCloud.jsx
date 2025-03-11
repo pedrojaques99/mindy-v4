@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../main';
+import { useLanguage } from '../context/LanguageContext';
 
 export default function TagCloud({ tags: propTags, selectedTags, onTagClick }) {
   const [tags, setTags] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const navigate = useNavigate();
+  const { t } = useLanguage();
   
   // If tags are provided as props, use them
   useEffect(() => {
@@ -72,22 +74,27 @@ export default function TagCloud({ tags: propTags, selectedTags, onTagClick }) {
   
   return (
     <div className="flex flex-wrap gap-2">
-      {tags.map(({ tag, count }) => (
-        <button
-          key={tag}
-          onClick={() => handleTagClick(tag)}
-          className={`px-3 py-1 text-sm rounded-full transition-colors ${
-            selectedTags?.includes(tag)
-              ? 'bg-[#bfff58]/20 text-[#bfff58]'
-              : 'bg-[rgba(255,255,255,0.05)] text-gray-300 hover:bg-[rgba(255,255,255,0.1)]'
-          }`}
-        >
-          {tag} {count > 1 && <span className="text-xs opacity-70">({count})</span>}
-        </button>
-      ))}
+      {tags.map(({ tag, count }) => {
+        // Get translated tag if available
+        const translatedTag = t(`tags.${tag.toLowerCase()}`, tag);
+        
+        return (
+          <button
+            key={tag}
+            onClick={() => handleTagClick(tag)}
+            className={`px-3 py-1 text-sm rounded-full transition-colors ${
+              selectedTags?.includes(tag)
+                ? 'bg-[#bfff58]/20 text-[#bfff58]'
+                : 'bg-[rgba(255,255,255,0.05)] text-gray-300 hover:bg-[rgba(255,255,255,0.1)]'
+            }`}
+          >
+            {translatedTag} {count > 1 && <span className="text-xs opacity-70">({count})</span>}
+          </button>
+        );
+      })}
       
       {tags.length === 0 && (
-        <p className="text-gray-400 text-sm">No tags found</p>
+        <p className="text-gray-400 text-sm">{t('home.tags.noTags', 'No tags found')}</p>
       )}
     </div>
   );

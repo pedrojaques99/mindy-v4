@@ -330,18 +330,23 @@ export default function ResourceCard({ resource, delay = 0 }) {
               {/* Tags */}
               {resource.tags && resource.tags.length > 0 && (
                 <div className="mt-3 flex flex-wrap gap-1">
-                  {resource.tags.slice(0, 3).map((tag, index) => (
-                    <button 
-                      key={index} 
-                      className="tag hover:bg-glass-200 transition-colors"
-                      onClick={(e) => handleTagClick(e, tag)}
-                    >
-                      {tag.includes(':') ? (
-                        <SoftwareIcon name={tag.split(':')[1]} className="mr-1" />
-                      ) : null}
-                      {tag.includes(':') ? tag.split(':')[1] : tag}
-                    </button>
-                  ))}
+                  {resource.tags.slice(0, 3).map((tag, index) => {
+                    // Check if tag has a translation
+                    const translatedTag = t(`tags.${tag.toLowerCase()}`, tag);
+                    
+                    return (
+                      <button 
+                        key={index} 
+                        className="tag hover:bg-glass-200 transition-colors"
+                        onClick={(e) => handleTagClick(e, tag)}
+                      >
+                        {tag.includes(':') ? (
+                          <SoftwareIcon name={tag.split(':')[1]} className="mr-1" />
+                        ) : null}
+                        {tag.includes(':') ? tag.split(':')[1] : translatedTag}
+                      </button>
+                    );
+                  })}
                   {resource.tags.length > 3 && (
                     <span className="tag">+{resource.tags.length - 3}</span>
                   )}

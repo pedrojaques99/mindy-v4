@@ -23,6 +23,41 @@ export const FALLBACK_TRANSLATIONS = {
       inspiration: 'Inspiration',
       learn: 'Learn',
       software: 'Software'
+    },
+    resource: {
+      detailsTitle: 'Details',
+      details: 'Details',
+      description: 'Description',
+      category: 'Category',
+      tags: 'Tags',
+      comments: 'Comments',
+      loading: 'Loading...',
+      notFound: 'Resource not found',
+      visitWebsite: 'Visit Website',
+      share: 'Share',
+      save: 'Save',
+      saved: 'Saved',
+      addFavorite: 'Add to favorites',
+      removeFavorite: 'Remove from favorites',
+      addedToFavorites: 'Added to favorites',
+      removedFromFavorites: 'Removed from favorites',
+      share: {
+        copied: 'Link copied to clipboard'
+      }
+    },
+    ui: {
+      back: 'Back'
+    },
+    common: {
+      backToHome: 'Back to Home',
+      error: 'An error occurred'
+    },
+    errors: {
+      resourceNotFound: 'Resource not found',
+      resourceNotFoundDesc: 'The resource you are looking for does not exist or has been removed.'
+    },
+    auth: {
+      signInRequired: 'Sign in required to perform this action'
     }
   },
   pt: {
@@ -36,6 +71,28 @@ export const FALLBACK_TRANSLATIONS = {
       search: {
         placeholder: 'Busque por recursos, ferramentas ou inspiração...',
         submit: 'Buscar'
+      },
+      tags: {
+        popular: 'Tags populares',
+        noTags: 'Nenhuma tag encontrada'
+      },
+      sections: {
+        filterResources: 'Filtrar Recursos',
+        trendingResources: 'Recursos em Destaque',
+        recentUploads: 'Uploads Recentes',
+        software: 'Software'
+      },
+      filters: {
+        activeLabel: 'Filtros ativos',
+        remove: 'Remover filtro',
+        clearAll: 'Limpar todos',
+        selectSubcategory: 'Selecionar subcategoria: {{name}}',
+        selectSoftware: 'Selecionar software: {{name}}',
+        filterByTags: 'Filtrar por tags',
+        selected: 'selecionados',
+        clear: 'Limpar',
+        noTags: 'Nenhuma tag disponível',
+        selectedFilters: 'Filtros selecionados'
       }
     },
     categories: {
@@ -46,6 +103,85 @@ export const FALLBACK_TRANSLATIONS = {
       inspiration: 'Inspiração',
       learn: 'Aprender',
       software: 'Software'
+    },
+    subcategories: {
+      fonts: 'Fontes',
+      icons: 'Ícones',
+      textures: 'Texturas',
+      sfx: 'Efeitos Sonoros',
+      mockups: 'Mockups',
+      '3d': '3D',
+      'photos-videos': 'Imagens',
+      color: 'Cores',
+      ai: 'IA',
+      productivity: 'Produtividade',
+      portfolio: 'Portfólio',
+      design: 'Design',
+      ui: 'UI',
+      audiovisual: 'Audiovisual',
+      moodboard: 'Moodboard',
+      reference: 'Referência',
+      'ui-ux': 'UI/UX',
+      typography: 'Tipografia',
+      books: 'Livros'
+    },
+    tags: {
+      free: 'grátis',
+      design: 'design',
+      typography: 'tipografia',
+      ai: 'ia',
+      '3d': '3d',
+      mockups: 'mockups',
+      icons: 'ícones',
+      templates: 'templates',
+      resources: 'recursos',
+      tools: 'ferramentas'
+    },
+    software: {
+      figma: 'Figma',
+      photoshop: 'Photoshop',
+      blender: 'Blender',
+      cursor: 'Cursor',
+      illustrator: 'Illustrator',
+      indesign: 'InDesign',
+      'after-effects': 'After Effects',
+      premiere: 'Premiere'
+    },
+    resource: {
+      detailsTitle: 'Detalhes',
+      details: 'Detalhes',
+      description: 'Descrição',
+      category: 'Categoria',
+      tags: 'Tags',
+      comments: 'Comentários',
+      loading: 'Carregando...',
+      notFound: 'Recurso não encontrado',
+      visitWebsite: 'Visitar Site',
+      share: 'Compartilhar',
+      save: 'Salvar',
+      saved: 'Salvo',
+      addFavorite: 'Adicionar aos favoritos',
+      removeFavorite: 'Remover dos favoritos',
+      addedToFavorites: 'Adicionado aos favoritos',
+      removedFromFavorites: 'Removido dos favoritos',
+      share: {
+        copied: 'Link copiado para a área de transferência'
+      }
+    },
+    ui: {
+      back: 'Voltar'
+    },
+    common: {
+      backToHome: 'Voltar para a Página Inicial',
+      error: 'Ocorreu um erro',
+      viewAll: 'Ver todos'
+    },
+    errors: {
+      resourceNotFound: 'Recurso não encontrado',
+      resourceNotFoundDesc: 'O recurso que você está procurando não existe ou foi removido.'
+    },
+    auth: {
+      signInRequired: 'É necessário fazer login para realizar esta ação'
     }
   }
 };

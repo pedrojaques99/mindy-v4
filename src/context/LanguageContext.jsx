@@ -42,6 +42,41 @@ const FALLBACK_TRANSLATIONS = {
       inspiration: 'Inspiration',
       learn: 'Learn',
       software: 'Software'
+    },
+    resource: {
+      detailsTitle: 'Details',
+      details: 'Details',
+      description: 'Description',
+      category: 'Category',
+      tags: 'Tags',
+      comments: 'Comments',
+      loading: 'Loading...',
+      notFound: 'Resource not found',
+      visitWebsite: 'Visit Website',
+      share: 'Share',
+      save: 'Save',
+      saved: 'Saved',
+      addFavorite: 'Add to favorites',
+      removeFavorite: 'Remove from favorites',
+      addedToFavorites: 'Added to favorites',
+      removedFromFavorites: 'Removed from favorites',
+      share: {
+        copied: 'Link copied to clipboard'
+      }
+    },
+    ui: {
+      back: 'Back'
+    },
+    common: {
+      backToHome: 'Back to Home',
+      error: 'An error occurred'
+    },
+    errors: {
+      resourceNotFound: 'Resource not found',
+      resourceNotFoundDesc: 'The resource you are looking for does not exist or has been removed.'
+    },
+    auth: {
+      signInRequired: 'Sign in required to perform this action'
     }
   },
   pt: {
@@ -55,6 +90,28 @@ const FALLBACK_TRANSLATIONS = {
       search: {
         placeholder: 'Busque por recursos, ferramentas ou inspiração...',
         submit: 'Buscar'
+      },
+      tags: {
+        popular: 'Tags populares',
+        noTags: 'Nenhuma tag encontrada'
+      },
+      sections: {
+        filterResources: 'Filtrar Recursos',
+        trendingResources: 'Recursos em Destaque',
+        recentUploads: 'Uploads Recentes',
+        software: 'Software'
+      },
+      filters: {
+        activeLabel: 'Filtros ativos',
+        remove: 'Remover filtro',
+        clearAll: 'Limpar todos',
+        selectSubcategory: 'Selecionar subcategoria: {{name}}',
+        selectSoftware: 'Selecionar software: {{name}}',
+        filterByTags: 'Filtrar por tags',
+        selected: 'selecionados',
+        clear: 'Limpar',
+        noTags: 'Nenhuma tag disponível',
+        selectedFilters: 'Filtros selecionados'
       }
     },
     categories: {
@@ -65,6 +122,85 @@ const FALLBACK_TRANSLATIONS = {
       inspiration: 'Inspiração',
       learn: 'Aprender',
       software: 'Software'
+    },
+    subcategories: {
+      fonts: 'Fontes',
+      icons: 'Ícones',
+      textures: 'Texturas',
+      sfx: 'Efeitos Sonoros',
+      mockups: 'Mockups',
+      '3d': '3D',
+      'photos-videos': 'Imagens',
+      color: 'Cores',
+      ai: 'IA',
+      productivity: 'Produtividade',
+      portfolio: 'Portfólio',
+      design: 'Design',
+      ui: 'UI',
+      audiovisual: 'Audiovisual',
+      moodboard: 'Moodboard',
+      reference: 'Referência',
+      'ui-ux': 'UI/UX',
+      typography: 'Tipografia',
+      books: 'Livros'
+    },
+    tags: {
+      free: 'grátis',
+      design: 'design',
+      typography: 'tipografia',
+      ai: 'ia',
+      '3d': '3d',
+      mockups: 'mockups',
+      icons: 'ícones',
+      templates: 'templates',
+      resources: 'recursos',
+      tools: 'ferramentas'
+    },
+    software: {
+      figma: 'Figma',
+      photoshop: 'Photoshop',
+      blender: 'Blender',
+      cursor: 'Cursor',
+      illustrator: 'Illustrator',
+      indesign: 'InDesign',
+      'after-effects': 'After Effects',
+      premiere: 'Premiere'
+    },
+    resource: {
+      detailsTitle: 'Detalhes',
+      details: 'Detalhes',
+      description: 'Descrição',
+      category: 'Categoria',
+      tags: 'Tags',
+      comments: 'Comentários',
+      loading: 'Carregando...',
+      notFound: 'Recurso não encontrado',
+      visitWebsite: 'Visitar Site',
+      share: 'Compartilhar',
+      save: 'Salvar',
+      saved: 'Salvo',
+      addFavorite: 'Adicionar aos favoritos',
+      removeFavorite: 'Remover dos favoritos',
+      addedToFavorites: 'Adicionado aos favoritos',
+      removedFromFavorites: 'Removido dos favoritos',
+      share: {
+        copied: 'Link copiado para a área de transferência'
+      }
+    },
+    ui: {
+      back: 'Voltar'
+    },
+    common: {
+      backToHome: 'Voltar para a Página Inicial',
+      error: 'Ocorreu um erro',
+      viewAll: 'Ver todos'
+    },
+    errors: {
+      resourceNotFound: 'Recurso não encontrado',
+      resourceNotFoundDesc: 'O recurso que você está procurando não existe ou foi removido.'
+    },
+    auth: {
+      signInRequired: 'É necessário fazer login para realizar esta ação'
     }
   }
 };
@@ -167,7 +303,7 @@ export const LanguageProvider = ({ children }) => {
     const initLanguage = async () => {
       try {
         setLoading(true);
-        let selectedLang = languages.en;
+        let selectedLang = languages.en; // Always start with English as default
         
         // First check user profile if logged in
         if (profile?.language && languages[profile.language]) {
@@ -179,18 +315,24 @@ export const LanguageProvider = ({ children }) => {
           if (storedLang && languages[storedLang]) {
             selectedLang = languages[storedLang];
           }
-          // Finally, try browser language
-          else {
-            const browserLang = navigator.language.split('-')[0];
-            if (languages[browserLang]) {
-              selectedLang = languages[browserLang];
-            }
-          }
+          // We're no longer checking browser language by default
+          // This ensures English is the default unless explicitly changed
         }
         
-        const langTranslations = await loadTranslations(selectedLang.code);
+        // Always load English translations first as a base
+        const englishTranslations = await loadTranslations('en');
+        
+        // If the selected language is not English, load and merge with English
+        if (selectedLang.code !== 'en') {
+          const langTranslations = await loadTranslations(selectedLang.code);
+          // Merge English with the selected language, giving priority to the selected language
+          const mergedTranslations = { ...englishTranslations, ...langTranslations };
+          setTranslations(mergedTranslations);
+        } else {
+          setTranslations(englishTranslations);
+        }
+        
         setCurrentLanguage(selectedLang);
-        setTranslations(langTranslations);
       } catch (error) {
         console.error('Error initializing language:', error);
         // Default to English on error
@@ -212,10 +354,21 @@ export const LanguageProvider = ({ children }) => {
     try {
       setLoading(true);
       const newLang = languages[langCode];
-      const langTranslations = await loadTranslations(langCode);
+      
+      // Always load English translations first as a base
+      const englishTranslations = await loadTranslations('en');
+      
+      // If the selected language is not English, load and merge with English
+      if (langCode !== 'en') {
+        const langTranslations = await loadTranslations(langCode);
+        // Merge English with the selected language, giving priority to the selected language
+        const mergedTranslations = { ...englishTranslations, ...langTranslations };
+        setTranslations(mergedTranslations);
+      } else {
+        setTranslations(englishTranslations);
+      }
       
       setCurrentLanguage(newLang);
-      setTranslations(langTranslations);
       
       // Update user preference in Supabase if logged in
       if (user) {
@@ -233,7 +386,7 @@ export const LanguageProvider = ({ children }) => {
       toast.error(`Failed to change language: ${error.message}`);
       
       // Use fallback translations
-      setTranslations(FALLBACK_TRANSLATIONS[langCode] || FALLBACK_TRANSLATIONS.en);
+      setTranslations(FALLBACK_TRANSLATIONS.en);
     } finally {
       setLoading(false);
     }
@@ -241,7 +394,7 @@ export const LanguageProvider = ({ children }) => {
 
   // Enhanced translate function with nested key support and interpolation
   const t = (key, defaultText = key, interpolations = {}) => {
-    if (loading) return defaultText;
+    if (loading) return defaultText !== key ? defaultText : "Loading...";
     
     try {
       // Get the translation from the nested structure
@@ -249,6 +402,19 @@ export const LanguageProvider = ({ children }) => {
       
       // If no translation found or it's not a string, return default
       if (!translation || typeof translation !== 'string') {
+        // Make sure we never return the key itself
+        if (defaultText === key) {
+          // Try to get English translation as fallback
+          const englishTranslation = getNestedValue(FALLBACK_TRANSLATIONS.en, key);
+          if (englishTranslation && typeof englishTranslation === 'string') {
+            return englishTranslation;
+          }
+          
+          // If we can't find an English translation, convert the key to a readable format
+          return key.split('.').pop().replace(/([A-Z])/g, ' $1')
+            .replace(/^./, str => str.toUpperCase())
+            .replace(/([a-z])([A-Z])/g, '$1 $2');
+        }
         return defaultText;
       }
       
@@ -262,6 +428,23 @@ export const LanguageProvider = ({ children }) => {
       return translation;
     } catch (error) {
       console.warn(`Translation error for key "${key}":`, error);
+      // Make sure we never return the key itself
+      if (defaultText === key) {
+        // Try to get English translation as fallback
+        try {
+          const englishTranslation = getNestedValue(FALLBACK_TRANSLATIONS.en, key);
+          if (englishTranslation && typeof englishTranslation === 'string') {
+            return englishTranslation;
+          }
+        } catch (e) {
+          // Ignore error and continue with fallback
+        }
+        
+        // If we can't find an English translation, convert the key to a readable format
+        return key.split('.').pop().replace(/([A-Z])/g, ' $1')
+          .replace(/^./, str => str.toUpperCase())
+          .replace(/([a-z])([A-Z])/g, '$1 $2');
+      }
       return defaultText;
     }
   };
