@@ -4,9 +4,11 @@ import { supabase } from '../main';
 import { useUser } from '../context/UserContext';
 import ResourceCard from '../components/ResourceCard';
 import toast from 'react-hot-toast';
+import { useLanguage } from '../context/LanguageContext';
 
 const FavoritesPage = () => {
   const { user } = useUser();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [favorites, setFavorites] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,14 +40,14 @@ const FavoritesPage = () => {
         setFavorites(processedData);
       } catch (error) {
         console.error('Error fetching favorites:', error);
-        toast.error('Failed to load favorites');
+        toast.error(t('favorites.errors.loadFavorites', 'Failed to load favorites'));
       } finally {
         setLoading(false);
       }
     };
     
     fetchFavorites();
-  }, [user]);
+  }, [user, t]);
   
   const handleRemoveFavorite = async (favoriteId) => {
     try {
@@ -58,10 +60,10 @@ const FavoritesPage = () => {
       
       // Update local state
       setFavorites(favorites.filter(fav => fav.id !== favoriteId));
-      toast.success('Removed from favorites');
+      toast.success(t('favorites.removed', 'Removed from favorites'));
     } catch (error) {
       console.error('Error removing favorite:', error);
-      toast.error('Failed to remove from favorites');
+      toast.error(t('favorites.errors.removeFavorite', 'Failed to remove from favorites'));
     }
   };
   
@@ -75,27 +77,27 @@ const FavoritesPage = () => {
   
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold mb-6">Your Favorites</h1>
+      <h1 className="text-2xl font-bold mb-6">{t('favorites.title', 'Your Favorites')}</h1>
       
       {!user ? (
         <div className="glass-card p-6 text-center">
           <p className="text-white/70 mb-4">
-            Sign in to save and view your favorite resources.
+            {t('favorites.signInPrompt', 'Sign in to save and view your favorite resources.')}
           </p>
           <button 
             onClick={() => navigate('/')}
             className="btn btn-primary"
           >
-            Sign In
+            {t('common.signIn', 'Sign In')}
           </button>
         </div>
       ) : favorites.length === 0 ? (
         <div className="glass-card p-6 text-center">
           <p className="text-white/70 mb-4">
-            You haven't added any favorites yet.
+            {t('favorites.empty', "You haven't added any favorites yet.")}
           </p>
           <Link to="/" className="btn btn-primary">
-            Browse Resources
+            {t('favorites.browseResources', 'Browse Resources')}
           </Link>
         </div>
       ) : (

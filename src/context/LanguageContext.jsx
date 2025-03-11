@@ -35,6 +35,13 @@ export const LanguageProvider = ({ children }) => {
   const [translations, setTranslations] = useState({});
   const [loading, setLoading] = useState(true);
 
+  // Helper function to get nested object value by path
+  const getNestedValue = (obj, path) => {
+    return path.split('.').reduce((current, key) => {
+      return current && current[key] !== undefined ? current[key] : undefined;
+    }, obj);
+  };
+
   // Load translations for current language
   const loadTranslations = async (langCode) => {
     try {
@@ -49,10 +56,45 @@ export const LanguageProvider = ({ children }) => {
         return {};
       }
       
-      // Transform data into a key-value object
+      if (!Array.isArray(data)) {
+        console.error('Invalid translation data format');
+        return {};
+      }
+
+      // Transform data into a nested object structure
       const translationData = {};
+      
       data.forEach(item => {
-        translationData[item.key] = item.value;
+        try {
+          if (!item || typeof item.key !== 'string' || !item.value) {
+            console.warn('Invalid translation item:', item);
+            return;
+          }
+
+          const keys = item.key.split('.');
+          let current = translationData;
+          
+          // Create nested structure
+          for (let i = 0; i < keys.length - 1; i++) {
+            const key = keys[i];
+            // If current key points to a string, convert it to an object
+            if (typeof current[key] === 'string') {
+              const oldValue = current[key];
+              current[key] = { _value: oldValue };
+            }
+            // Create object if it doesn't exist
+            current[key] = current[key] || {};
+            current = current[key];
+          }
+          
+          // Set the final value
+          const lastKey = keys[keys.length - 1];
+          if (typeof current === 'object') {
+            current[lastKey] = item.value;
+          }
+        } catch (err) {
+          console.warn('Error processing translation item:', item, err);
+        }
       });
       
       return translationData;
@@ -74,7 +116,7 @@ export const LanguageProvider = ({ children }) => {
           selectedLang = languages[profile.language];
         }
         // Then check localStorage
-        else if (!user) {
+        else if (typeof window !== 'undefined' && !user) {
           const storedLang = localStorage.getItem('preferredLanguage');
           if (storedLang && languages[storedLang]) {
             selectedLang = languages[storedLang];
@@ -122,8 +164,10 @@ export const LanguageProvider = ({ children }) => {
         await updateUserProfile({ language: langCode });
       }
       
-      // Always store in localStorage for persistence
-      localStorage.setItem('preferredLanguage', langCode);
+      // Always store in localStorage for persistence if in browser
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('preferredLanguage', langCode);
+      }
     } catch (error) {
       console.error('Error changing language:', error);
     } finally {
@@ -131,10 +175,31 @@ export const LanguageProvider = ({ children }) => {
     }
   };
 
-  // Translate function
-  const t = (key, defaultText = key) => {
+  // Enhanced translate function with nested key support and interpolation
+  const t = (key, defaultText = key, interpolations = {}) => {
     if (loading) return defaultText;
-    return translations[key] || defaultText;
+    
+    try {
+      // Get the translation from the nested structure
+      const translation = getNestedValue(translations, key);
+      
+      // If no translation found or it's not a string, return default
+      if (!translation || typeof translation !== 'string') {
+        return defaultText;
+      }
+      
+      // Handle interpolations if any
+      if (Object.keys(interpolations).length > 0) {
+        return translation.replace(/\{\{(\w+)\}\}/g, (_, key) => 
+          interpolations[key] !== undefined ? interpolations[key] : `{{${key}}}`
+        );
+      }
+      
+      return translation;
+    } catch (error) {
+      console.warn(`Translation error for key "${key}":`, error);
+      return defaultText;
+    }
   };
 
   const value = {

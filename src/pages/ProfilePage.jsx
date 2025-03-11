@@ -6,9 +6,11 @@ import { getAvatarUrl } from '../utils/avatarUtils';
 import { PencilIcon } from '@heroicons/react/outline';
 import ResourceCard from '../components/ResourceCard';
 import toast from 'react-hot-toast';
+import { useLanguage } from '../context/LanguageContext';
 
 const ProfilePage = () => {
   const { user, profile, signOut } = useUser();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [signingOut, setSigningOut] = useState(false);
@@ -45,14 +47,14 @@ const ProfilePage = () => {
         setFavorites(processedData);
       } catch (error) {
         console.error('Error fetching favorites:', error);
-        toast.error('Failed to load favorites');
+        toast.error(t('profile.errors.loadFavorites', 'Failed to load favorites'));
       } finally {
         setLoading(false);
       }
     };
     
     fetchFavorites();
-  }, [user, navigate]);
+  }, [user, navigate, t]);
   
   const handleSignOut = async () => {
     try {
@@ -62,14 +64,14 @@ const ProfilePage = () => {
       
       if (result.success) {
         console.log('Sign out successful, navigating to home');
-    navigate('/');
+        navigate('/');
       } else {
         console.error('Sign out returned error:', result.error);
-        toast.error(`Failed to sign out: ${result.error}`);
+        toast.error(t('profile.errors.signOut', 'Failed to sign out: {error}', { error: result.error }));
       }
     } catch (error) {
       console.error('Exception in handleSignOut:', error);
-      toast.error('An unexpected error occurred during sign out');
+      toast.error(t('profile.errors.unexpectedSignOut', 'An unexpected error occurred during sign out'));
     } finally {
       setSigningOut(false);
     }
@@ -82,7 +84,7 @@ const ProfilePage = () => {
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="glass-card p-8 mb-8">
-        <h1 className="text-2xl font-bold mb-6">Profile</h1>
+        <h1 className="text-2xl font-bold mb-6">{t('profile.title', 'Profile')}</h1>
         
         <div className="flex flex-col md:flex-row gap-8">
           {/* Profile Information */}
@@ -92,13 +94,13 @@ const ProfilePage = () => {
                 <div className="w-24 h-24 rounded-full overflow-hidden mb-4 border-2 border-lime-accent">
                   <img 
                     src={currentAvatarUrl} 
-                    alt="User Avatar" 
+                    alt={t('profile.avatar.alt', 'User Avatar')}
                     className="w-full h-full object-cover"
                   />
                 </div>
                 
                 <h3 className="text-xl font-medium">
-                  {profile?.username || user?.email?.split('@')[0] || 'User'}
+                  {profile?.username || user?.email?.split('@')[0] || t('profile.defaultUsername', 'User')}
                 </h3>
                 
                 <div className="flex mt-4 space-x-4">
@@ -145,7 +147,7 @@ const ProfilePage = () => {
                 
                 <Link to="/edit-profile" className="mt-6 btn btn-primary text-sm flex items-center gap-2">
                   <PencilIcon className="w-4 h-4" />
-                  Edit Profile
+                  {t('profile.editProfile', 'Edit Profile')}
                 </Link>
               </div>
             </div>
@@ -154,42 +156,42 @@ const ProfilePage = () => {
           {/* Account Information */}
           <div className="w-full md:w-2/3">
             <div className="bg-dark-400 p-6 rounded-lg mb-6">
-              <h2 className="text-lg font-medium mb-4">Account Information</h2>
+              <h2 className="text-lg font-medium mb-4">{t('profile.accountInfo.title', 'Account Information')}</h2>
               
               <div className="space-y-4">
                 <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-0">
-                  <span className="w-full md:w-1/3 text-white/60">Email:</span>
+                  <span className="w-full md:w-1/3 text-white/60">{t('profile.accountInfo.email', 'Email')}:</span>
                   <span className="md:w-2/3">{user.email}</span>
                 </div>
                 
                 <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-0">
-                  <span className="w-full md:w-1/3 text-white/60">Member since:</span>
+                  <span className="w-full md:w-1/3 text-white/60">{t('profile.accountInfo.memberSince', 'Member since')}:</span>
                   <span className="md:w-2/3">
-                {new Date(user.created_at).toLocaleDateString()}
-              </span>
-            </div>
+                    {new Date(user.created_at).toLocaleDateString()}
+                  </span>
+                </div>
                 
                 <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-0">
-                  <span className="w-full md:w-1/3 text-white/60">Username:</span>
+                  <span className="w-full md:w-1/3 text-white/60">{t('profile.accountInfo.username', 'Username')}:</span>
                   <span className="md:w-2/3">
-                    {profile?.username || 'Not set'}
+                    {profile?.username || t('profile.accountInfo.notSet', 'Not set')}
                   </span>
-          </div>
-        </div>
-        
+                </div>
+              </div>
+              
               <div className="mt-6 pt-4 border-t border-dark-300">
-          <button 
-            onClick={handleSignOut}
-            className="btn btn-secondary"
+                <button 
+                  onClick={handleSignOut}
+                  className="btn btn-secondary"
                   disabled={signingOut}
                 >
                   {signingOut ? (
                     <>
                       <span className="spinner-sm mr-2"></span>
-                      Signing Out...
+                      {t('profile.signOut.inProgress', 'Signing Out...')}
                     </>
-                  ) : 'Sign Out'}
-          </button>
+                  ) : t('profile.signOut.button', 'Sign Out')}
+                </button>
               </div>
             </div>
           </div>
@@ -197,7 +199,7 @@ const ProfilePage = () => {
       </div>
       
       <div className="mb-8">
-        <h2 className="text-xl font-bold mb-4">Your Favorites</h2>
+        <h2 className="text-xl font-bold mb-4">{t('profile.favorites.title', 'Your Favorites')}</h2>
         
         {loading ? (
           <div className="flex justify-center py-8">
@@ -215,9 +217,9 @@ const ProfilePage = () => {
           </div>
         ) : (
           <div className="glass-card p-6 text-center">
-            <p className="text-white/60 mb-4">You haven't added any favorites yet.</p>
+            <p className="text-white/60 mb-4">{t('profile.favorites.empty', "You haven't added any favorites yet.")}</p>
             <a href="/" className="text-lime-accent hover:underline">
-              Browse resources
+              {t('profile.favorites.browse', 'Browse resources')}
             </a>
           </div>
         )}

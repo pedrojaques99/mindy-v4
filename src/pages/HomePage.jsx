@@ -55,64 +55,112 @@ const resourceHasTag = (resource, tagToCheck) => {
   return false;
 };
 
-// Define the initial category structure
-const INITIAL_CATEGORIES = {
-  assets: { name: 'Assets', emoji: '🎨', icon: <CollectionIcon className="w-5 h-5" />, count: 0, subcategories: [
-    { id: 'fonts', name: 'Fonts', emoji: '🔤', count: 0 },
-    { id: 'icons', name: 'Icons', emoji: '🔍', count: 0 },
-    { id: 'textures', name: 'Textures', emoji: '🧩', count: 0 },
-    { id: 'sfx', name: 'SFX', emoji: '🔊', count: 0 },
-    { id: 'mockups', name: 'Mockups', emoji: '📱', count: 0 },
-    { id: '3d', name: '3D', emoji: '🧊', count: 0 },
-    { id: 'photos-videos', name: 'Images', emoji: '📸', count: 0 },
-    { id: 'color', name: 'Color', emoji: '🎨', count: 0 },
-  ]},
-  tools: { name: 'Tools', emoji: '🔧', icon: <CubeIcon className="w-5 h-5" />, count: 0, subcategories: [
-    { id: 'ai', name: 'AI', emoji: '🤖', count: 0 },
-    { id: 'productivity', name: 'Productivity', emoji: '⚡', count: 0 },
-  ]},
-  community: { name: 'Community', emoji: '👥', icon: <UserGroupIcon className="w-5 h-5" />, count: 0, subcategories: [
-    { id: 'portfolio', name: 'Portfolio', emoji: '💼', count: 0 },
-  ]},
-  reference: { name: 'Reference', emoji: '📌', icon: <LightBulbIcon className="w-5 h-5" />, count: 0, subcategories: [
-    { id: 'design', name: 'Design', emoji: '🎨', count: 0 },
-    { id: 'ui', name: 'UI', emoji: '📊', count: 0 },
-    { id: 'audiovisual', name: 'Audiovisual', emoji: '🎬', count: 0 },
-  ]},
-  inspiration: { name: 'Inspiration', emoji: '✨', icon: <LightBulbIcon className="w-5 h-5" />, count: 0, subcategories: [
-    { id: 'moodboard', name: 'Moodboard', emoji: '🎭', count: 0 },
-    { id: 'reference', name: 'Reference', emoji: '📌', count: 0 },
-  ]},
-  learn: { name: 'Learn', emoji: '📚', icon: <BookOpenIcon className="w-5 h-5" />, count: 0, subcategories: [
-    { id: 'design', name: 'Design', emoji: '🎨', count: 0 },
-    { id: 'ui-ux', name: 'UI/UX', emoji: '📊', count: 0 },
-    { id: 'typography', name: 'Typography', emoji: '🔠', count: 0 },
-    { id: 'books', name: 'Books', emoji: '📚', count: 0 }
-  ]}
-};
-
-// Initial software categories
-const INITIAL_SOFTWARE_CATEGORIES = [
-  { id: 'figma', name: 'Figma', icon: '/icons/figma-icon.svg', color: '#F24E1E', count: 0 },
-  { id: 'photoshop', name: 'Photoshop', icon: '/icons/photoshop-icon.svg', color: '#31A8FF', count: 0 },
-  { id: 'blender', name: 'Blender', icon: '/icons/blender-icon.svg', color: '#F5792A', count: 0 },
-  { id: 'cursor', name: 'Cursor', icon: '/icons/cursor-icon.svg', color: '#FFFFFF', count: 0 },
-  { id: 'illustrator', name: 'Illustrator', icon: '/icons/illustrator-icon.svg', color: '#FF9A00', count: 0 },
-  { id: 'indesign', name: 'InDesign', icon: '/icons/in-design-icon.svg', color: '#FF3366', count: 0 },
-  { id: 'after-effects', name: 'After Effects', icon: '/icons/ae-icon.svg', color: '#9999FF', count: 0 },
-  { id: 'premiere', name: 'Premiere', icon: '/icons/premiere-icon.svg', color: '#9999FF', count: 0 }
-];
-
-// Popular tags for suggestions
-const POPULAR_TAGS = [
-  'free', 'design', 'typography', 'ai', '3d', 'mockups', 
-  'icons', 'templates', 'resources', 'tools'
-];
-
 const HomePage = () => {
   const { user } = useUser();
   const { t } = useLanguage();
   const navigate = useNavigate();
+  
+  // Check if we're in the browser environment
+  const isBrowser = typeof window !== 'undefined';
+  
+  // Popular tags for suggestions - moved inside component to access t function
+  const POPULAR_TAGS = [
+    t('tags.free', 'free'), 
+    t('tags.design', 'design'), 
+    t('tags.typography', 'typography'), 
+    t('tags.ai', 'ai'), 
+    t('tags.3d', '3d'), 
+    t('tags.mockups', 'mockups'),
+    t('tags.icons', 'icons'), 
+    t('tags.templates', 'templates'), 
+    t('tags.resources', 'resources'), 
+    t('tags.tools', 'tools')
+  ];
+
+  // Move INITIAL_SOFTWARE_CATEGORIES inside component to use t function
+  const INITIAL_SOFTWARE_CATEGORIES = [
+    { id: 'figma', name: t('software.figma', 'Figma'), icon: '/icons/figma-icon.svg', color: '#F24E1E', count: 0 },
+    { id: 'photoshop', name: t('software.photoshop', 'Photoshop'), icon: '/icons/photoshop-icon.svg', color: '#31A8FF', count: 0 },
+    { id: 'blender', name: t('software.blender', 'Blender'), icon: '/icons/blender-icon.svg', color: '#F5792A', count: 0 },
+    { id: 'cursor', name: t('software.cursor', 'Cursor'), icon: '/icons/cursor-icon.svg', color: '#FFFFFF', count: 0 },
+    { id: 'illustrator', name: t('software.illustrator', 'Illustrator'), icon: '/icons/illustrator-icon.svg', color: '#FF9A00', count: 0 },
+    { id: 'indesign', name: t('software.indesign', 'InDesign'), icon: '/icons/in-design-icon.svg', color: '#FF3366', count: 0 },
+    { id: 'after-effects', name: t('software.after-effects', 'After Effects'), icon: '/icons/ae-icon.svg', color: '#9999FF', count: 0 },
+    { id: 'premiere', name: t('software.premiere', 'Premiere'), icon: '/icons/premiere-icon.svg', color: '#9999FF', count: 0 }
+  ];
+
+  // Move INITIAL_CATEGORIES inside component to use t function
+  const INITIAL_CATEGORIES = {
+    assets: { 
+      name: t('categories.assets', 'Assets'), 
+      emoji: '🎨', 
+      icon: <CollectionIcon className="w-5 h-5" />, 
+      count: 0, 
+      subcategories: [
+        { id: 'fonts', name: t('subcategories.fonts', 'Fonts'), emoji: '🔤', count: 0 },
+        { id: 'icons', name: t('subcategories.icons', 'Icons'), emoji: '🔍', count: 0 },
+        { id: 'textures', name: t('subcategories.textures', 'Textures'), emoji: '🧩', count: 0 },
+        { id: 'sfx', name: t('subcategories.sfx', 'SFX'), emoji: '🔊', count: 0 },
+        { id: 'mockups', name: t('subcategories.mockups', 'Mockups'), emoji: '📱', count: 0 },
+        { id: '3d', name: t('subcategories.3d', '3D'), emoji: '🧊', count: 0 },
+        { id: 'photos-videos', name: t('subcategories.photos-videos', 'Images'), emoji: '📸', count: 0 },
+        { id: 'color', name: t('subcategories.color', 'Color'), emoji: '🎨', count: 0 },
+      ]
+    },
+    tools: { 
+      name: t('categories.tools', 'Tools'), 
+      emoji: '🔧', 
+      icon: <CubeIcon className="w-5 h-5" />, 
+      count: 0, 
+      subcategories: [
+        { id: 'ai', name: t('subcategories.ai', 'AI'), emoji: '🤖', count: 0 },
+        { id: 'productivity', name: t('subcategories.productivity', 'Productivity'), emoji: '⚡', count: 0 },
+      ]
+    },
+    community: { 
+      name: t('categories.community', 'Community'), 
+      emoji: '👥', 
+      icon: <UserGroupIcon className="w-5 h-5" />, 
+      count: 0, 
+      subcategories: [
+        { id: 'portfolio', name: t('subcategories.portfolio', 'Portfolio'), emoji: '💼', count: 0 },
+      ]
+    },
+    reference: { 
+      name: t('categories.reference', 'Reference'), 
+      emoji: '📌', 
+      icon: <LightBulbIcon className="w-5 h-5" />, 
+      count: 0, 
+      subcategories: [
+        { id: 'design', name: t('subcategories.design', 'Design'), emoji: '🎨', count: 0 },
+        { id: 'ui', name: t('subcategories.ui', 'UI'), emoji: '📊', count: 0 },
+        { id: 'audiovisual', name: t('subcategories.audiovisual', 'Audiovisual'), emoji: '🎬', count: 0 },
+      ]
+    },
+    inspiration: { 
+      name: t('categories.inspiration', 'Inspiration'), 
+      emoji: '✨', 
+      icon: <LightBulbIcon className="w-5 h-5" />, 
+      count: 0, 
+      subcategories: [
+        { id: 'moodboard', name: t('subcategories.moodboard', 'Moodboard'), emoji: '🎭', count: 0 },
+        { id: 'reference', name: t('subcategories.reference', 'Reference'), emoji: '📌', count: 0 },
+      ]
+    },
+    learn: { 
+      name: t('categories.learn', 'Learn'), 
+      emoji: '📚', 
+      icon: <BookOpenIcon className="w-5 h-5" />, 
+      count: 0, 
+      subcategories: [
+        { id: 'design', name: t('subcategories.design', 'Design'), emoji: '🎨', count: 0 },
+        { id: 'ui-ux', name: t('subcategories.ui-ux', 'UI/UX'), emoji: '📊', count: 0 },
+        { id: 'typography', name: t('subcategories.typography', 'Typography'), emoji: '🔠', count: 0 },
+        { id: 'books', name: t('subcategories.books', 'Books'), emoji: '📚', count: 0 }
+      ]
+    }
+  };
+
   const [searchQuery, setSearchQuery] = useState('');
   const [suggestedTags, setSuggestedTags] = useState([]);
   const [recentResources, setRecentResources] = useState([]);
@@ -120,7 +168,7 @@ const HomePage = () => {
   const [trendingResources, setTrendingResources] = useState([]);
   const [loading, setLoading] = useState(true);
   const [categories, setCategories] = useState(INITIAL_CATEGORIES);
-  const [softwareCategories, setSoftwareCategories] = useState(INITIAL_SOFTWARE_CATEGORIES);
+  const [softwareCategories, setSoftwareCategories] = useState([]);
   const [selectedFilters, setSelectedFilters] = useState({
     category: null,
     subcategory: null,
@@ -133,6 +181,9 @@ const HomePage = () => {
   
   useEffect(() => {
     const fetchResources = async () => {
+      // Only fetch if we're in the browser
+      if (!isBrowser) return;
+      
       try {
         setLoading(true);
         
@@ -191,48 +242,24 @@ const HomePage = () => {
         
         if (!allResources) return;
         
-        // DIAGNOSTIC: Log all unique category/subcategory combinations from the database
-        const categorySubcategoryPairs = {};
-        allResources.forEach(resource => {
-          const category = resource.category || 'undefined';
-          const subcategory = resource.subcategory || 'undefined';
-          const key = `${category}/${subcategory}`;
-          
-          if (!categorySubcategoryPairs[key]) {
-            categorySubcategoryPairs[key] = 0;
-          }
-          categorySubcategoryPairs[key]++;
+        // Create a deep copy of the categories structure without React elements
+        const updatedCategories = {};
+        Object.entries(INITIAL_CATEGORIES).forEach(([key, category]) => {
+          updatedCategories[key] = {
+            ...category,
+            // Don't include the icon in the copy since it's a React element
+            icon: category.icon,
+            subcategories: [...category.subcategories]
+          };
         });
-        
-        console.log('Category/Subcategory pairs in database:', categorySubcategoryPairs);
-        
-        // Map database category/subcategory names to our UI structure
-        // This handles cases where DB names don't match our UI structure
-        const categoryMap = {
-          'reference': 'reference',
-          'tool': 'tools',
-          'shop': 'learn',
-          // Add other mappings as needed
-        };
-        
-        // Create a deep copy of the categories structure
-        const updatedCategories = JSON.parse(JSON.stringify(INITIAL_CATEGORIES));
         
         // Count resources for each category and subcategory
         Object.keys(updatedCategories).forEach(categoryKey => {
-          // Find resources for this category, using the mapping if available
+          // Find resources for this category
           const resourcesInCategory = allResources.filter(r => {
             if (!r.category) return false;
-            
             const normalizedCategory = r.category.toLowerCase();
-            // Check direct match
-            if (normalizedCategory === categoryKey.toLowerCase()) return true;
-            
-            // Check via mapping
-            return Object.entries(categoryMap).some(([dbCategory, uiCategory]) => 
-              normalizedCategory === dbCategory.toLowerCase() && 
-              uiCategory.toLowerCase() === categoryKey.toLowerCase()
-            );
+            return normalizedCategory === categoryKey.toLowerCase();
           });
           
           updatedCategories[categoryKey].count = resourcesInCategory.length;
@@ -282,7 +309,7 @@ const HomePage = () => {
     };
     
     fetchResources();
-  }, []);
+  }, [isBrowser]); // Add isBrowser to dependencies
   
   // Apply filters whenever they change
   useEffect(() => {
@@ -442,6 +469,40 @@ const HomePage = () => {
     </div>
   );
   
+  // Format timestamp with browser check
+  const formatTime = (date) => {
+    if (!isBrowser) return '';
+    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  };
+
+  // Change language function
+  const changeLanguage = async (langCode) => {
+    if (!languages[langCode] || currentLanguage.code === langCode) return;
+    
+    try {
+      setLoading(true);
+      const newLang = languages[langCode];
+      const langTranslations = await loadTranslations(langCode);
+      
+      setCurrentLanguage(newLang);
+      setTranslations(langTranslations);
+      
+      // Update user preference in Supabase if logged in
+      if (user) {
+        await updateUserProfile({ language: langCode });
+      }
+      
+      // Always store in localStorage for persistence if in browser
+      if (isBrowser) {
+        localStorage.setItem('preferredLanguage', langCode);
+      }
+    } catch (error) {
+      console.error('Error changing language:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
@@ -462,7 +523,11 @@ const HomePage = () => {
             transition={{ duration: 0.6 }}
           >
             <h1 className="text-4xl md:text-5xl font-bold mb-4 text-white drop-shadow-md">
-              {t('home.hero.title', 'Discover')} <span className="text-[#bfff58] drop-shadow-lg">{t('home.hero.titleHighlight', 'Creative Resources')}</span> {t('home.hero.titleEnd', 'for Your Projects')}
+              {t('home.hero.title', 'Discover')}{' '}
+              <span className="text-[#bfff58] drop-shadow-lg">
+                {t('home.hero.titleHighlight', 'Creative Resources')}
+              </span>{' '}
+              {t('home.hero.titleEnd', 'for Your Projects')}
             </h1>
             <p className="text-lg text-gray-300 mb-8 drop-shadow-sm">
               {t('home.hero.subtitle', 'Find the best tools, assets, and inspiration for designers, developers, and creators.')}
@@ -481,6 +546,7 @@ const HomePage = () => {
                 <button 
                   type="submit"
                   className="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-lg bg-[#bfff58]/20 text-[#bfff58] hover:bg-[#bfff58]/30 transition-colors"
+                  aria-label={t('home.search.submit', 'Submit search')}
                 >
                   <SearchIcon className="w-5 h-5" />
                 </button>
@@ -513,7 +579,7 @@ const HomePage = () => {
             
             {/* Popular tags */}
             <div className="flex flex-wrap justify-center gap-2">
-              <span className="text-sm text-gray-400">{t('home.popular.label', 'Popular')}:</span>
+              <span className="text-sm text-gray-400">{t('home.tags.popular', 'Popular tags')}:</span>
               {POPULAR_TAGS.slice(0, 6).map((tag) => (
                 <button
                   key={tag}
@@ -543,15 +609,15 @@ const HomePage = () => {
               
               if (type === 'category') {
                 const category = categories[value];
-                displayText = category?.name || value;
+                displayText = t(`categories.${value}`, category?.name || value);
                 emoji = category?.emoji || '';
               } else if (type === 'subcategory') {
                 const subcategory = subcategories.find(s => s.id === value);
-                displayText = subcategory?.name || value;
+                displayText = t(`subcategories.${value}`, subcategory?.name || value);
                 emoji = subcategory?.emoji || '';
               } else if (type === 'software') {
                 const software = softwareCategories.find(s => s.id === value);
-                displayText = software?.name || value;
+                displayText = t(`software.${value}`, software?.name || value);
               }
               
               return (
@@ -564,6 +630,7 @@ const HomePage = () => {
                   <button 
                     onClick={() => handleFilterSelect(type, value)}
                     className="ml-1 p-0.5 hover:bg-dark-300 rounded-full"
+                    aria-label={t('home.filters.remove', 'Remove filter')}
                   >
                     <XIcon className="h-3 w-3" />
                   </button>
@@ -587,28 +654,40 @@ const HomePage = () => {
         {Object.entries(categories).map(([categoryId, category]) => (
           <div key={categoryId} className="mb-6">
             <div className="flex items-center justify-between mb-3">
-              <h4 className="text-sm font-medium text-white/90 uppercase tracking-wider">{t(`categories.${categoryId}`, category.name)}</h4>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-dark-300/80 text-gray-400">{category.count}</span>
+              <h4 className="text-sm font-medium text-white/90 uppercase tracking-wider">
+                {t(`categories.${categoryId}`, category.name)}
+              </h4>
+              <span className="text-xs px-2 py-0.5 rounded-full bg-dark-300/80 text-gray-400">
+                {category.count}
+              </span>
             </div>
             
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
-              {category.subcategories.map((subcategory) => (
-                <button
-                  key={subcategory.id}
-                  onClick={() => handleFilterSelect('subcategory', subcategory.id)}
-                  className={`flex items-center justify-between px-3 py-2 rounded-lg ${
-                    selectedFilters.subcategory === subcategory.id
-                      ? 'bg-[#bfff58]/20 text-[#bfff58] border border-[#bfff58]/30'
-                      : 'bg-dark-200 text-white hover:bg-dark-300 border border-transparent'
-                  } transition-colors`}
-                >
-                  <div className="flex items-center">
-                    <span className="mr-2 text-lg" role="img" aria-label={subcategory.name}>{subcategory.emoji}</span>
-                    <span className="text-sm">{t(`subcategories.${subcategory.id}`, subcategory.name)}</span>
-                  </div>
-                  <span className="text-xs px-1.5 py-0.5 rounded-full bg-dark-300/80 text-gray-400">{subcategory.count}</span>
-                </button>
-              ))}
+              {category.subcategories.map((subcategory) => {
+                const translatedName = t(`subcategories.${subcategory.id}`, subcategory.name);
+                return (
+                  <button
+                    key={subcategory.id}
+                    onClick={() => handleFilterSelect('subcategory', subcategory.id)}
+                    className={`flex items-center justify-between px-3 py-2 rounded-lg ${
+                      selectedFilters.subcategory === subcategory.id
+                        ? 'bg-[#bfff58]/20 text-[#bfff58] border border-[#bfff58]/30'
+                        : 'bg-dark-200 text-white hover:bg-dark-300 border border-transparent'
+                    } transition-colors`}
+                    aria-label={t('home.filters.selectSubcategory', 'Select subcategory: {{name}}', { name: translatedName })}
+                  >
+                    <div className="flex items-center">
+                      <span className="mr-2 text-lg" role="img" aria-label={translatedName}>
+                        {subcategory.emoji}
+                      </span>
+                      <span className="text-sm">{translatedName}</span>
+                    </div>
+                    <span className="text-xs px-1.5 py-0.5 rounded-full bg-dark-300/80 text-gray-400">
+                      {subcategory.count}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         ))}
@@ -617,8 +696,12 @@ const HomePage = () => {
       {/* Software Filter */}
       <section className="container mx-auto px-4 mb-8">
         <div className="flex items-center justify-between mb-3">
-          <h3 className="text-sm font-medium text-white/90 uppercase tracking-wider">{t('home.sections.software', 'Software')}</h3>
-          <span className="text-xs px-2 py-0.5 rounded-full bg-dark-300/80 text-gray-400">{softwareCategories.reduce((sum, sw) => sum + sw.count, 0)}</span>
+          <h3 className="text-sm font-medium text-white/90 uppercase tracking-wider">
+            {t('home.sections.software', 'Software')}
+          </h3>
+          <span className="text-xs px-2 py-0.5 rounded-full bg-dark-300/80 text-gray-400">
+            {softwareCategories.reduce((sum, sw) => sum + sw.count, 0)}
+          </span>
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-8 gap-3">
           {softwareCategories.map((software) => (
@@ -630,6 +713,7 @@ const HomePage = () => {
                   ? 'bg-dark-300 border border-[#bfff58]/30'
                   : 'bg-dark-200 hover:bg-dark-300 border border-transparent'
               } transition-all duration-200`}
+              aria-label={t('home.filters.selectSoftware', 'Select software: {{name}}', { name: software.name })}
             >
               <div 
                 className={`w-10 h-10 mb-2 flex items-center justify-center rounded-lg overflow-hidden ${
@@ -640,7 +724,7 @@ const HomePage = () => {
               >
                 <img 
                   src={software.icon} 
-                  alt={software.name} 
+                  alt={t(`software.${software.id}`, software.name)}
                   className={`w-6 h-6 object-contain ${
                     selectedFilters.software === software.id
                       ? 'filter brightness-0 invert sepia(100%) saturate(300%) brightness(80%) hue-rotate(60deg)'
@@ -749,7 +833,7 @@ const HomePage = () => {
       )}
       
       {/* CSS for hiding scrollbars while maintaining functionality */}
-      <style jsx>{`
+      <style>{`
         .hide-scrollbar {
           -ms-overflow-style: none;
           scrollbar-width: none;

@@ -7,7 +7,7 @@ import SearchBar from '../components/SearchBar';
 import FilterTags from '../components/FilterTags';
 import ResourceCard from '../components/ResourceCard';
 import toast from 'react-hot-toast';
-import { ArrowLeftIcon, HomeIcon, ChevronRightIcon } from '@heroicons/react/outline';
+import { ArrowLeftIcon, HomeIcon, ChevronRightIcon, XIcon } from '@heroicons/react/outline';
 
 const CategoryPage = () => {
   const { category } = useParams();
@@ -86,8 +86,8 @@ const CategoryPage = () => {
         } else {
           // Create a default category object based on the slug
           setCategoryData({
-            name: category.charAt(0).toUpperCase() + category.slice(1),
-            description: `Browse our curated collection of ${category} resources`,
+            name: t(`categories.${category}`, category.charAt(0).toUpperCase() + category.slice(1)),
+            description: t('categories.description', 'Browse our curated collection of {category} resources', { category: t(`categories.${category}`, category) }),
             slug: category
           });
         }
@@ -174,7 +174,7 @@ const CategoryPage = () => {
       setResources(filteredResources);
     } catch (error) {
       console.error('Error fetching data:', error);
-      toast.error('Failed to load resources');
+      toast.error(t('common.error.loading', 'Failed to load resources'));
     } finally {
       setLoading(false);
     }

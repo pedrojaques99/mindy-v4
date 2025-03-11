@@ -86,7 +86,7 @@ export default function ResourcePage() {
         }
       } catch (error) {
         console.error('Error fetching resource:', error);
-        toast.error('Resource not found');
+        toast.error(t('errors.resourceNotFound', 'Resource not found'));
       } finally {
         setIsLoading(false);
       }
@@ -181,7 +181,7 @@ export default function ResourcePage() {
       setComments(data || []);
     } catch (error) {
       console.error('Error fetching comments:', error);
-      toast.error('Failed to load comments');
+      toast.error(t('common.error.comments', 'Failed to load comments'));
     } finally {
       setIsLoadingComments(false);
     }
@@ -317,7 +317,7 @@ export default function ResourcePage() {
   return (
     <>
       <Helmet>
-        <title>{resource.title} - Mindy</title>
+        <title>{resource ? `${resource.title} - Mindy` : t('common.loading', 'Loading...')}</title>
         <meta name="description" content={resource.description} />
       </Helmet>
       

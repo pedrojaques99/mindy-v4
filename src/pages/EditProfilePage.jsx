@@ -5,6 +5,7 @@ import { getAvatarPreviews, getAvatarUrl } from '../utils/avatarUtils';
 import { supabase } from '../main';
 import toast from 'react-hot-toast';
 import { ArrowLeftIcon, CheckIcon, ExternalLinkIcon, RefreshIcon } from '@heroicons/react/outline';
+import { useLanguage } from '../context/LanguageContext';
 
 // Map of social media platform data
 const SOCIAL_PLATFORMS = {
@@ -89,6 +90,7 @@ const formatSocialUrl = (username, platform) => {
 
 const EditProfilePage = () => {
   const { user, profile, updateUserProfile, profileLoading, fetchUserProfile } = useUser();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
     username: '',
@@ -126,7 +128,7 @@ const EditProfilePage = () => {
         if (error) {
           console.error("Supabase connection error:", error);
           setSupabaseConnected(false);
-          setLoadError("Could not connect to database. Please check your internet connection.");
+          setLoadError(t('editProfile.errors.connection', 'Could not connect to database. Please check your internet connection.'));
         } else {
           console.log("Supabase connection successful");
           setSupabaseConnected(true);
@@ -134,7 +136,7 @@ const EditProfilePage = () => {
       } catch (error) {
         console.error("Supabase connection check failed:", error);
         setSupabaseConnected(false);
-        setLoadError("Could not connect to database. Please check your internet connection.");
+        setLoadError(t('editProfile.errors.connection', 'Could not connect to database. Please check your internet connection.'));
       }
     };
     
@@ -145,17 +147,16 @@ const EditProfilePage = () => {
       if (pageLoading) {
         console.warn("Loading timeout reached, forcing fallback");
         setPageLoading(false);
-        setLoadError("Loading took too long. Please try refreshing the page.");
+        setLoadError(t('editProfile.errors.timeout', 'Loading took too long. Please try refreshing the page.'));
       }
     }, 10000); // 10 second timeout
     
     return () => {
-      // Clear timeout on unmount
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
     };
-  }, []);
+  }, [t]);
   
   // Effect to check if user is authenticated
   useEffect(() => {
@@ -309,20 +310,36 @@ const EditProfilePage = () => {
   
   const handleSubmit = async (e) => {
     e.preventDefault();
+    
+    // Validate username
+    const usernameError = validateUsername(formData.username);
+    if (usernameError) {
+      toast.error(usernameError);
+      return;
+    }
+    
     setLoading(true);
     
     try {
-      const { success, error } = await updateUserProfile(formData);
+      // Format social URLs
+      const updatedData = {
+        ...formData,
+        behance_url: formatSocialUrl(socialUsernames.behance, 'behance'),
+        instagram_url: formatSocialUrl(socialUsernames.instagram, 'instagram'),
+        twitter_url: formatSocialUrl(socialUsernames.twitter, 'twitter'),
+        linkedin_url: formatSocialUrl(socialUsernames.linkedin, 'linkedin'),
+        github_url: formatSocialUrl(socialUsernames.github, 'github')
+      };
       
-      if (success) {
-        toast.success('Profile updated successfully');
-        navigate('/profile');
-      } else {
-        toast.error(error || 'Failed to update profile');
-      }
+      const { error } = await updateUserProfile(updatedData);
+      
+      if (error) throw error;
+      
+      toast.success(t('editProfile.success', 'Profile updated successfully'));
+      navigate('/profile');
     } catch (error) {
-      toast.error('An unexpected error occurred');
-      console.error(error);
+      console.error('Error updating profile:', error);
+      toast.error(t('editProfile.errors.update', 'Failed to update profile'));
     } finally {
       setLoading(false);
     }
@@ -332,257 +349,188 @@ const EditProfilePage = () => {
     window.location.reload();
   };
   
-  // Add the validateUsername function
   const validateUsername = (username) => {
-    if (!username) return null; // Not validated yet
-    
-    // Basic username validation - no spaces, special characters limited
-    const isValid = /^[\w.-]+$/.test(username);
-    return isValid;
+    if (!username) {
+      return t('editProfile.validation.required', 'Username is required');
+    }
+    if (username.length < 3) {
+      return t('editProfile.validation.tooShort', 'Username must be at least 3 characters long');
+    }
+    if (username.length > 20) {
+      return t('editProfile.validation.tooLong', 'Username must be less than 20 characters long');
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
+      return t('editProfile.validation.invalidChars', 'Username can only contain letters, numbers, underscores, and hyphens');
+    }
+    return null;
   };
   
-  // If loading, show spinner
-  if (pageLoading) {
-    return (
-      <div className="container mx-auto px-4 py-16 flex flex-col items-center justify-center">
-        <div className="spinner mb-4"></div>
-        <p className="text-white/60">Loading profile data...</p>
-      </div>
-    );
-  }
+  if (!user) return null;
   
-  // If there was an error loading
   if (loadError) {
     return (
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-lg mx-auto glass-card p-8 text-center">
-          <div className="text-red-400 mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-          </div>
-          <h2 className="text-xl font-medium mb-2">Connection Error</h2>
-          <p className="text-white/60 mb-6">{loadError}</p>
-          <button 
-            onClick={handleRetry}
-            className="btn btn-primary inline-flex items-center"
-          >
-            <RefreshIcon className="w-4 h-4 mr-2" />
-            Try Again
-          </button>
-          <div className="mt-4">
-            <Link to="/profile" className="text-lime-accent hover:underline">
-              Return to Profile
-            </Link>
+      <div className="container mx-auto px-4 py-8">
+        <div className="max-w-2xl mx-auto">
+          <div className="glass-card p-8 text-center">
+            <h1 className="text-2xl font-bold mb-4">{t('editProfile.errors.title', 'Error Loading Profile')}</h1>
+            <p className="text-white/70 mb-6">{loadError}</p>
+            <button onClick={handleRetry} className="btn btn-primary">
+              <RefreshIcon className="w-5 h-5 mr-2" />
+              {t('common.retry', 'Retry')}
+            </button>
           </div>
         </div>
       </div>
     );
   }
   
-  // Rest of the component rendering...
   return (
     <div className="container mx-auto px-4 py-8">
       <div className="max-w-2xl mx-auto">
-        {/* Header */}
         <div className="flex items-center mb-6">
           <Link to="/profile" className="flex items-center text-white/60 hover:text-lime-accent transition-colors mr-4">
             <ArrowLeftIcon className="w-5 h-5 mr-1" />
-            <span>Back to Profile</span>
+            <span>{t('common.backToProfile', 'Back to Profile')}</span>
           </Link>
-          <h1 className="text-2xl font-bold">Edit Profile</h1>
+          <h1 className="text-2xl font-bold">{t('editProfile.title', 'Edit Profile')}</h1>
         </div>
         
-        {/* Form container */}
-        <div className="glass-card p-6 md:p-8">
-          {/* Tab navigation */}
-          <div className="flex border-b border-dark-300 mb-6">
+        <div className="glass-card p-6 mb-8">
+          <div className="flex gap-4 mb-6">
             <button
-              className={`pb-3 px-4 font-medium transition-colors ${
-                activeSection === 'profile' ? 'text-lime-accent border-b-2 border-lime-accent' : 'text-white/60 hover:text-white'
-              }`}
               onClick={() => setActiveSection('profile')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                activeSection === 'profile'
+                  ? 'bg-lime-accent text-dark-900'
+                  : 'bg-dark-400 text-white/90 hover:bg-dark-300'
+              }`}
             >
-              Profile Info
+              {t('editProfile.sections.profile', 'Profile')}
             </button>
             <button
-              className={`pb-3 px-4 font-medium transition-colors ${
-                activeSection === 'social' ? 'text-lime-accent border-b-2 border-lime-accent' : 'text-white/60 hover:text-white'
-              }`}
               onClick={() => setActiveSection('social')}
+              className={`px-4 py-2 rounded-md transition-colors ${
+                activeSection === 'social'
+                  ? 'bg-lime-accent text-dark-900'
+                  : 'bg-dark-400 text-white/90 hover:bg-dark-300'
+              }`}
             >
-              Social Media
+              {t('editProfile.sections.social', 'Social Media')}
             </button>
           </div>
           
           <form onSubmit={handleSubmit}>
-            {/* Profile section */}
-            {activeSection === 'profile' && (
-              <div className="space-y-6">
-                {/* Avatar preview section */}
-                <div className="flex justify-center mb-8">
-                  <div className="w-32 h-32 rounded-full overflow-hidden border-4 border-dark-300">
-                    <img 
-                      src={getAvatarUrl(formData.avatar_type, formData.username || 'preview')} 
-                      alt="Avatar Preview" 
-                      className="w-full h-full object-cover"
-                    />
-                  </div>
-                </div>
-                
-                {/* Username field */}
-                <div>
-                  <label className="block mb-2 text-sm font-medium">Username</label>
+            {activeSection === 'profile' ? (
+              <>
+                {/* Username Field */}
+                <div className="mb-6">
+                  <label htmlFor="username" className="block text-sm font-medium mb-2">
+                    {t('editProfile.form.username', 'Username')} *
+                  </label>
                   <input
                     type="text"
+                    id="username"
                     name="username"
                     value={formData.username}
                     onChange={handleInputChange}
-                    placeholder="Enter username"
-                    className="w-full p-3 rounded-md bg-dark-500 border border-dark-300 text-white"
-                    autoComplete="off"
+                    className="w-full px-4 py-2 bg-dark-400 border border-glass-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-accent"
+                    required
                   />
-                  <p className="mt-1 text-xs text-white/50">
-                    This username will be visible to others and will affect your avatar.
+                  <p className="mt-1 text-sm text-white/50">
+                    {t('editProfile.form.usernameHelp', 'This will be your public display name')}
                   </p>
                 </div>
                 
-                {/* Avatar selection */}
-                <div>
-                  <label className="block mb-3 text-sm font-medium">Choose Avatar Style</label>
-                  <div className="flex justify-center gap-6">
-                    {avatarPreviews.map((avatar) => (
-                      <div 
-                        key={avatar.type}
-                        onClick={() => handleAvatarSelect(avatar.type)}
-                        className="relative"
+                {/* Avatar Selection */}
+                <div className="mb-6">
+                  <label className="block text-sm font-medium mb-2">
+                    {t('editProfile.form.avatar', 'Avatar')}
+                  </label>
+                  <div className="grid grid-cols-3 sm:grid-cols-5 gap-4">
+                    {avatarPreviews.map((preview, index) => (
+                      <button
+                        key={index}
+                        type="button"
+                        onClick={() => handleAvatarSelect(index + 1)}
+                        className={`relative aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
+                          formData.avatar_type === index + 1
+                            ? 'border-lime-accent'
+                            : 'border-transparent hover:border-white/20'
+                        }`}
                       >
-                        <div className={`w-24 h-24 rounded-full overflow-hidden cursor-pointer border-2 transition-all ${
-                          formData.avatar_type === avatar.type 
-                            ? 'border-lime-accent scale-110 shadow-lg shadow-lime-accent/20' 
-                            : 'border-dark-300 opacity-60 hover:opacity-100'
-                        }`}>
-                          <img 
-                            src={avatar.url} 
-                            alt={`Avatar ${avatar.label}`} 
-                            className="w-full h-full object-cover"
-                          />
-                        </div>
-                        {formData.avatar_type === avatar.type && (
-                          <div className="absolute -top-2 -right-2 bg-lime-accent text-dark-500 rounded-full p-1">
-                            <CheckIcon className="w-4 h-4" />
+                        <img
+                          src={preview}
+                          alt={t('editProfile.form.avatarAlt', 'Avatar option {number}', { number: index + 1 })}
+                          className="w-full h-full object-cover"
+                        />
+                        {formData.avatar_type === index + 1 && (
+                          <div className="absolute inset-0 bg-lime-accent/20 flex items-center justify-center">
+                            <CheckIcon className="w-6 h-6 text-lime-accent" />
                           </div>
                         )}
-                        <p className="text-center mt-2 text-sm">{avatar.label}</p>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
-              </div>
-            )}
-            
-            {/* Social Media section */}
-            {activeSection === 'social' && (
-              <div className="space-y-5">
-                <p className="text-white/60 mb-4">
-                  Add your social media profiles. Just enter your username, not the full URL.
-                </p>
-                
-                {Object.entries(SOCIAL_PLATFORMS).map(([platform, data]) => (
-                  <div key={platform} className="group">
-                    <label className="block mb-1 text-sm font-medium flex items-center">
-                      <span className="text-white/80 mr-2">{data.name}</span>
-                      {socialUsernames[platform] && (
-                        <a 
-                          href={formatSocialUrl(socialUsernames[platform], platform)} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-xs text-lime-accent/60 hover:text-lime-accent flex items-center gap-1"
-                        >
-                          <span>View</span>
-                          <ExternalLinkIcon className="w-3 h-3" />
-                        </a>
-                      )}
-                    </label>
-                    
-                    <div className="relative flex flex-col sm:flex-row items-stretch">
-                      {/* URL prefix as a separate, non-editable element - full width on mobile */}
-                      <div className="flex items-center px-3 py-2 sm:py-3 bg-dark-600 border border-dark-300 sm:border-r-0 rounded-t-md sm:rounded-t-none sm:rounded-l-md text-white/40 font-mono text-sm">
-                        <span className="flex items-center gap-2 w-full">
+              </>
+            ) : (
+              <>
+                {/* Social Media Links */}
+                <div className="space-y-6">
+                  {Object.entries(SOCIAL_PLATFORMS).map(([platform, data]) => (
+                    <div key={platform}>
+                      <label htmlFor={platform} className="block text-sm font-medium mb-2">
+                        <span className="flex items-center">
                           {data.icon}
-                          <span className="truncate">{data.prefix}</span>
+                          <span className="ml-2">{data.name}</span>
                         </span>
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1">
+                          <div className="relative">
+                            <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-white/40">
+                              {data.prefix}
+                            </span>
+                            <input
+                              type="text"
+                              id={platform}
+                              name={platform}
+                              value={socialUsernames[platform]}
+                              onChange={handleSocialUsernameChange}
+                              placeholder={data.placeholder}
+                              className="w-full pl-[120px] pr-4 py-2 bg-dark-400 border border-glass-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-lime-accent"
+                            />
+                          </div>
+                        </div>
+                        {socialUsernames[platform] && (
+                          <a
+                            href={formatSocialUrl(socialUsernames[platform], platform)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 text-white/60 hover:text-lime-accent"
+                          >
+                            <ExternalLinkIcon className="w-5 h-5" />
+                          </a>
+                        )}
                       </div>
-                      
-                      {/* Input for username only - full width on mobile */}
-                      <input
-                        type="text"
-                        name={`${platform}_username`}
-                        value={socialUsernames[platform]}
-                        onChange={handleSocialUsernameChange}
-                        placeholder={data.placeholder}
-                        className={`flex-1 px-3 py-2 sm:py-3 rounded-b-md sm:rounded-b-none sm:rounded-r-md bg-dark-500 border border-t-0 sm:border-t sm:border-l-0 
-                          ${socialUsernames[platform] ? (
-                            validateUsername(socialUsernames[platform]) 
-                              ? 'border-green-500/50 focus:border-green-500 focus:ring-green-500/30' 
-                              : 'border-red-500/50 focus:border-red-500 focus:ring-red-500/30'
-                          ) : 'border-dark-300 focus:border-lime-accent/50 focus:ring-lime-accent/50'}
-                          text-white focus:outline-none focus:ring-1 group-hover:border-dark-200 transition-all`}
-                        autoComplete="off"
-                        onFocus={() => {
-                          // Show the example text when input is focused
-                          const exampleEl = document.getElementById(`example-${platform}`);
-                          if (exampleEl) exampleEl.classList.remove('opacity-0');
-                        }}
-                      />
                     </div>
-                    
-                    {/* Helper text for each platform - shown on hover, focus, and validation errors */}
-                    <div 
-                      id={`example-${platform}`}
-                      className={`mt-1 text-xs transition-opacity duration-200 
-                        ${socialUsernames[platform] ? (
-                          validateUsername(socialUsernames[platform]) 
-                            ? 'text-green-400 opacity-100' 
-                            : 'text-red-400 opacity-100'
-                        ) : 'text-white/40 opacity-0 group-hover:opacity-100'}`}
-                    >
-                      {socialUsernames[platform] ? (
-                        validateUsername(socialUsernames[platform])
-                          ? `Valid username: ${data.prefix}${socialUsernames[platform]}`
-                          : 'Please use only letters, numbers, dots, underscores, and hyphens'
-                      ) : `Example: ${data.prefix}${data.placeholder}`}
-                    </div>
-                  </div>
-                ))}
-              </div>
+                  ))}
+                </div>
+              </>
             )}
             
-            {/* Action buttons */}
-            <div className="flex justify-between mt-8 pt-4 border-t border-dark-300">
-              <Link
-                to="/profile"
-                className="px-5 py-2.5 rounded-md bg-dark-300 text-white hover:bg-dark-200 transition-colors"
-              >
-                Cancel
-              </Link>
-              
+            <div className="mt-8 flex justify-end">
               <button
                 type="submit"
-                className="px-5 py-2.5 rounded-md bg-lime-accent text-dark-500 font-medium hover:bg-lime-accent/90 flex items-center gap-2 transition-colors"
+                className="btn btn-primary"
                 disabled={loading}
               >
                 {loading ? (
                   <>
-                    <span className="spinner-sm"></span>
-                    <span>Saving...</span>
+                    <span className="spinner-sm mr-2"></span>
+                    {t('editProfile.form.saving', 'Saving...')}
                   </>
-                ) : (
-                  <>
-                    <CheckIcon className="w-5 h-5" />
-                    <span>Save Profile</span>
-                  </>
-                )}
+                ) : t('editProfile.form.save', 'Save Changes')}
               </button>
             </div>
           </form>
