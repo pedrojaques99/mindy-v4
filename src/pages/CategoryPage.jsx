@@ -454,13 +454,13 @@ const CategoryPage = () => {
       
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">
-          {category === 'all' ? 'All Resources' : categoryData?.name || category}
-          {selectedSubcategory && <span className="text-lime-accent"> / {selectedSubcategory}</span>}
+          {category === 'all' ? t('categories.allResources', 'All Resources') : categoryData?.name || t(`categories.${category}`, category)}
+          {selectedSubcategory && <span className="text-lime-accent"> / {t(`subcategories.${selectedSubcategory}`, selectedSubcategory)}</span>}
         </h1>
         <p className="text-gray-300">
           {category === 'all' 
-            ? 'Browse our curated collection of resources' 
-            : categoryData?.description || `Browse our curated collection of ${category} resources`}
+            ? t('resources.browseAll', 'Browse our curated collection of resources')
+            : categoryData?.description || t('categories.description', 'Browse our curated collection of {category} resources', { category: t(`categories.${category}`, category) })}
         </p>
       </div>
       

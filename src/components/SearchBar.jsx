@@ -67,7 +67,12 @@ export default function SearchBar({ onSearch, className = '', minimal = false })
             user_id: user.id,
             results_count: 0 // This will be updated after results are fetched
           }
-        ])
+        ], { 
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json' 
+          }
+        })
         .catch(error => console.error('Error tracking search:', error));
         
       // Update recent searches

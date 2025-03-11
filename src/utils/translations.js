@@ -126,13 +126,23 @@ export const FALLBACK_TRANSLATIONS = {
       books: 'Livros'
     },
     tags: {
+      vector: 'vetor',
+      library: 'biblioteca',
+      web: 'web',
+      illustrations: 'ilustrações',
       free: 'grátis',
+      animated: 'animado',
+      shapes: 'formas',
       design: 'design',
+      png: 'png',
+      repository: 'repositório',
+      'material-design': 'material design',
+      google: 'google',
+      icons: 'ícones',
       typography: 'tipografia',
       ai: 'ia',
       '3d': '3d',
       mockups: 'mockups',
-      icons: 'ícones',
       templates: 'templates',
       resources: 'recursos',
       tools: 'ferramentas'
@@ -182,6 +192,99 @@ export const FALLBACK_TRANSLATIONS = {
     },
     auth: {
       signInRequired: 'É necessário fazer login para realizar esta ação'
+    }
+  },
+  'pt-BR': {
+    tags: {
+      vector: 'vetor',
+      library: 'biblioteca',
+      web: 'web',
+      illustrations: 'ilustrações',
+      free: 'grátis',
+      animated: 'animado',
+      shapes: 'formas',
+      design: 'design',
+      png: 'png',
+      repository: 'repositório',
+      'material-design': 'material design',
+      google: 'google',
+      icons: 'ícones',
+      typography: 'tipografia',
+      ai: 'ia',
+      '3d': '3d',
+      mockups: 'mockups',
+      templates: 'templates',
+      resources: 'recursos',
+      tools: 'ferramentas'
+    },
+    home: {
+      hero: {
+        title: 'Descubra',
+        titleHighlight: 'Recursos Criativos',
+        titleEnd: 'para seus Projetos',
+        subtitle: 'Encontre as melhores ferramentas, recursos e inspiração para designers, desenvolvedores e criadores.'
+      },
+      search: {
+        placeholder: 'Busque por recursos, ferramentas ou inspiração...',
+        submit: 'Buscar'
+      },
+      sections: {
+        trendingResources: 'Recursos em Alta',
+        filterResources: 'Filtrar Recursos',
+        recentUploads: 'Adicionados Recentemente',
+        mostLiked: 'Recursos Mais Curtidos',
+        software: 'Software'
+      },
+      filters: {
+        activeLabel: 'Filtros ativos',
+        selected: 'selecionados',
+        clear: 'Limpar',
+        clearAll: 'Limpar todos',
+        filterByTags: 'Filtrar por tags',
+        noTags: 'Nenhuma tag disponível',
+        selectedFilters: 'Filtros selecionados'
+      },
+      tags: {
+        popular: 'Tags populares',
+        all: 'Todas as tags',
+        trending: 'Tags em alta',
+        noTags: 'Nenhuma tag encontrada'
+      }
+    },
+    categories: {
+      allResources: 'Todos os Recursos',
+      description: 'Navegue por nossa coleção selecionada de recursos de {category}',
+      assets: 'Recursos',
+      tools: 'Ferramentas',
+      community: 'Comunidade',
+      reference: 'Referência',
+      inspiration: 'Inspiração',
+      learn: 'Aprender',
+      software: 'Software'
+    },
+    resources: {
+      browseAll: 'Navegue por nossa coleção selecionada de recursos'
+    },
+    common: {
+      search: 'Buscar recursos...',
+      editProfile: 'Editar Perfil',
+      loadMore: 'Mostrar mais',
+      viewAll: 'Ver todos',
+      backToHome: 'Voltar para a Página Inicial',
+      na: 'N/D',
+      share: 'Compartilhar',
+      signIn: 'Entrar'
+    },
+    ui: {
+      search: 'Pesquisar',
+      filter: 'Filtrar',
+      sort: 'Ordenar',
+      apply: 'Aplicar',
+      clear: 'Limpar',
+      add: 'Adicionar',
+      optional: 'Opcional',
+      retry: 'Tentar novamente',
+      back: 'Voltar'
     }
   }
 };

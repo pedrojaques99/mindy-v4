@@ -173,14 +173,40 @@ const HomePage = () => {
   // Check database connection on mount
   useEffect(() => {
     const checkConnection = async () => {
-      const isConnected = await checkSupabaseConnection();
-      if (!isConnected) {
+      const connectionStatus = await checkSupabaseConnection();
+      
+      if (!connectionStatus.success) {
+        console.error('Database connection details:', connectionStatus);
         setConnectionError(true);
-        toast.error('Database connection failed. Using fallback data.');
+        
+        // Show more detailed toast with the actual error
+        const errorMessage = connectionStatus.error?.message || 'Unknown error';
+        toast.error(`Database connection failed: ${errorMessage}. Using fallback data.`, {
+          duration: 5000 // Show for longer to make sure user sees it
+        });
+        
+        // If this is a network error, show a different message
+        if (errorMessage.includes('Failed to fetch')) {
+          toast('Check your internet connection and refresh the page.', {
+            icon: '🌐',
+            duration: 5000
+          });
+        }
+      } else {
+        console.log('Database connection successful:', connectionStatus);
+        // Optional success message for debugging
+        if (import.meta.env.DEV) {
+          toast.success(`Connected to database. Response time: ${connectionStatus.responseTime}ms`, {
+            duration: 3000
+          });
+        }
       }
     };
     
     checkConnection();
+    
+    // Don't run the connection check again due to state updates
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Fetch counts for all categories and subcategories
@@ -376,6 +402,21 @@ const HomePage = () => {
       } catch (resourcesError) {
         console.error('Error fetching resources:', resourcesError);
         setConnectionError(true);
+        
+        // Check for API key errors and provide more helpful message
+        if (resourcesError.message?.includes('No API key found') || 
+            resourcesError.hint?.includes('apikey')) {
+          console.error('API key authentication error. Check your Supabase configuration.');
+          toast.error('Authentication error: API key missing or invalid', {
+            duration: 5000,
+            icon: '🔑'
+          });
+          
+          // Log more debug information
+          console.log('Supabase URL:', supabaseUrl);
+          console.log('API Key length:', supabaseAnonKey ? supabaseAnonKey.length : 0);
+          console.log('API Key first 10 chars:', supabaseAnonKey ? supabaseAnonKey.substring(0, 10) + '...' : 'undefined');
+        }
         
         // Use empty arrays for resources
         setTrendingResources([]);

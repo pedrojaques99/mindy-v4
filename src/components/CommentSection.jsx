@@ -19,7 +19,16 @@ export default function CommentSection({ resourceId, comments, setComments, isLo
       return;
     }
     
-    if (!newComment.trim()) return;
+    if (!newComment.trim()) {
+      toast.error('Comment cannot be empty');
+      return;
+    }
+    
+    if (!resourceId) {
+      console.error('Missing resource ID for comment');
+      toast.error('Cannot add comment: Missing resource information');
+      return;
+    }
     
     setIsSubmitting(true);
     
@@ -30,10 +39,19 @@ export default function CommentSection({ resourceId, comments, setComments, isLo
         content: newComment.trim()
       };
       
+      console.log('Adding comment:', commentData);
+      
+      // Fix for Content-Type error
       const { data, error } = await supabase
         .from('comments')
-        .insert([commentData])
-        .select('*');
+        .insert([commentData], {
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+          },
+          returning: true
+        })
+        .select();
         
       if (error) throw error;
       
@@ -42,10 +60,20 @@ export default function CommentSection({ resourceId, comments, setComments, isLo
         setComments(prev => [data[0], ...prev]);
         setNewComment('');
         toast.success('Comment added');
+      } else {
+        toast.error('Comment was not added properly');
       }
     } catch (error) {
       console.error('Error adding comment:', error);
-      toast.error('Failed to add comment');
+      
+      // More descriptive error message based on the error type
+      if (error.message?.includes('Content-Type')) {
+        toast.error('Server communication error. Please try again.');
+      } else if (error.code === 'PGRST102') {
+        toast.error('Server response format error. Try refreshing the page.');
+      } else {
+        toast.error('Failed to add comment');
+      }
     } finally {
       setIsSubmitting(false);
     }

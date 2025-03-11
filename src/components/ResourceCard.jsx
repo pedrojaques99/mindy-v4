@@ -51,6 +51,7 @@ export default function ResourceCard({ resource, delay = 0 }) {
     if (!resource?.id) return;
     
     try {
+      // Try to connect to Supabase and fetch comment count
       const { count, error } = await supabase
         .from('comments')
         .select('id', { count: 'exact' })
@@ -60,7 +61,44 @@ export default function ResourceCard({ resource, delay = 0 }) {
       
       setCommentCount(count || 0);
     } catch (error) {
-      console.error('Error fetching comment count:', error);
+      // More detailed error logging
+      console.error('Error fetching comment count:', {
+        message: error.message,
+        details: error.details,
+        hint: error.hint,
+        code: error.code
+      });
+      
+      // Set default value when error occurs
+      setCommentCount(0);
+      
+      // Retry once after a short delay if it's a network error
+      if (error.message?.includes('Failed to fetch')) {
+        setTimeout(() => {
+          console.log('Retrying comment count fetch...');
+          retryFetchCommentCount();
+        }, 2000);
+      }
+    }
+  };
+  
+  // Retry function with simplified approach
+  const retryFetchCommentCount = async () => {
+    if (!resource?.id) return;
+    
+    try {
+      const { count, error } = await supabase
+        .from('comments')
+        .select('id', { count: 'exact' })
+        .eq('resource_id', resource.id);
+        
+      if (error) throw error;
+      
+      setCommentCount(count || 0);
+    } catch (error) {
+      // Just log the retry failure, don't attempt again
+      console.error('Retry fetch comment count failed:', error);
+      // Keep the default count of 0
     }
   };
   
@@ -73,7 +111,12 @@ export default function ResourceCard({ resource, delay = 0 }) {
         .from('resource_views')
         .insert([
           { resource_id: resource.id, user_id: user.id }
-        ]);
+        ], { 
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json' 
+          }
+        });
         
       // Update popularity
       try {
@@ -117,7 +160,12 @@ export default function ResourceCard({ resource, delay = 0 }) {
           .from('favorites')
           .insert([
             { user_id: user.id, resource_id: resource.id }
-          ]);
+          ], { 
+            headers: { 
+              'Content-Type': 'application/json',
+              'Accept': 'application/json' 
+            }
+          });
           
         if (error) throw error;
         
@@ -126,7 +174,13 @@ export default function ResourceCard({ resource, delay = 0 }) {
       }
     } catch (error) {
       console.error('Error toggling favorite:', error);
-      toast.error(t('common.error'));
+      
+      // Check for content type error and provide more specific message
+      if (error?.code === 'PGRST102' && error?.message?.includes('Content-Type')) {
+        toast.error(t('common.apiFormatError', 'API format error. Please try again.'));
+      } else {
+        toast.error(t('common.error'));
+      }
     } finally {
       setIsLoading(false);
     }

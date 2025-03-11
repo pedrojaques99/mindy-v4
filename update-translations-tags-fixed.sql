@@ -24,7 +24,7 @@ VALUES
   ('en', 'tags.adobe', 'adobe'),
   ('en', 'tags.react', 'react'),
   ('en', 'tags.vscode', 'vscode'),
-  
+
   -- Portuguese translations for tags
   ('pt-BR', 'tags.design', 'design'),
   ('pt-BR', 'tags.typography', 'tipografia'),
@@ -58,7 +58,7 @@ VALUES
   ('en', 'home.filters.selectedFilters', 'Selected filters'),
   ('en', 'home.filters.selectSubcategory', 'Select subcategory: {{name}}'),
   ('en', 'home.filters.selectSoftware', 'Select software: {{name}}'),
-  
+
   -- Portuguese translations for filter sections
   ('pt-BR', 'home.tags.noTags', 'Nenhuma tag encontrada'),
   ('pt-BR', 'home.filters.filterByTags', 'Filtrar por tags'),
@@ -68,7 +68,7 @@ VALUES
   ('pt-BR', 'home.filters.selectedFilters', 'Filtros selecionados'),
   ('pt-BR', 'home.filters.selectSubcategory', 'Selecionar subcategoria: {{name}}'),
   ('pt-BR', 'home.filters.selectSoftware', 'Selecionar software: {{name}}'),
-  
+
   -- English translations for ResourcePage
   ('en', 'resource.detailsTitle', 'Details'),
   ('en', 'resource.details', 'Details'),
@@ -94,7 +94,7 @@ VALUES
   ('en', 'resource.likes', 'Likes'),
   ('en', 'resource.visit', 'Visit'),
   ('en', 'resource.cardAriaLabel', 'View {title} details'),
-  
+
   -- Portuguese translations for ResourcePage
   ('pt-BR', 'resource.detailsTitle', 'Detalhes'),
   ('pt-BR', 'resource.details', 'Detalhes'),
@@ -120,7 +120,7 @@ VALUES
   ('pt-BR', 'resource.likes', 'Curtidas'),
   ('pt-BR', 'resource.visit', 'Visitar'),
   ('pt-BR', 'resource.cardAriaLabel', 'Ver detalhes de {title}'),
-  
+
   -- English translations for UI elements
   ('en', 'ui.back', 'Back'),
   ('en', 'common.backToHome', 'Back to Home'),
@@ -135,7 +135,7 @@ VALUES
   ('en', 'errors.resourceNotFound', 'Resource not found'),
   ('en', 'errors.resourceNotFoundDesc', 'The resource you are looking for does not exist or has been removed.'),
   ('en', 'auth.signInRequired', 'Please sign in to continue'),
-  
+
   -- Portuguese translations for UI elements
   ('pt-BR', 'ui.back', 'Voltar'),
   ('pt-BR', 'common.backToHome', 'Voltar para a Página Inicial'),
@@ -150,7 +150,7 @@ VALUES
   ('pt-BR', 'errors.resourceNotFound', 'Recurso não encontrado'),
   ('pt-BR', 'errors.resourceNotFoundDesc', 'O recurso que você está procurando não existe ou foi removido.'),
   ('pt-BR', 'auth.signInRequired', 'Faça login para continuar'),
-  
+
   -- English translations for CommentSection
   ('en', 'comments.addComment', 'Add a comment...'),
   ('en', 'comments.signInToComment', 'Sign in to comment'),
@@ -161,7 +161,7 @@ VALUES
   ('en', 'comments.commentDeleted', 'Comment deleted'),
   ('en', 'comments.failedToAdd', 'Failed to add comment'),
   ('en', 'comments.failedToDelete', 'Failed to delete comment'),
-  
+
   -- Portuguese translations for CommentSection
   ('pt-BR', 'comments.addComment', 'Adicionar um comentário...'),
   ('pt-BR', 'comments.signInToComment', 'Faça login para comentar'),
@@ -173,4 +173,4 @@ VALUES
   ('pt-BR', 'comments.failedToAdd', 'Falha ao adicionar comentário'),
   ('pt-BR', 'comments.failedToDelete', 'Falha ao excluir comentário')
 ON CONFLICT (language, key) DO UPDATE
-SET value = EXCLUDED.value; 
+SET value = EXCLUDED.value;

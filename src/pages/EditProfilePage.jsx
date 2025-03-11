@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { getAvatarPreviews, getAvatarUrl } from '../utils/avatarUtils';
@@ -115,7 +115,6 @@ const EditProfilePage = () => {
   const [pageLoading, setPageLoading] = useState(true);
   const [loadError, setLoadError] = useState(null);
   const [supabaseConnected, setSupabaseConnected] = useState(true);
-  const [avatarPreviews, setAvatarPreviews] = useState([]);
   const [activeSection, setActiveSection] = useState('profile');
   const timeoutRef = useRef(null);
   
@@ -149,7 +148,7 @@ const EditProfilePage = () => {
         setPageLoading(false);
         setLoadError(t('editProfile.errors.timeout', 'Loading took too long. Please try refreshing the page.'));
       }
-    }, 10000); // 10 second timeout
+    }, 20000); // Increased from 10000 (10 seconds) to 20000 (20 seconds)
     
     return () => {
       if (timeoutRef.current) {
@@ -173,6 +172,7 @@ const EditProfilePage = () => {
     const fetchProfileData = async () => {
       // Skip if there's no user or if Supabase isn't connected
       if (!user || !supabaseConnected) {
+        setPageLoading(false);
         return;
       }
       
@@ -182,6 +182,10 @@ const EditProfilePage = () => {
       try {
         console.log("Fetching profile data directly for user ID:", user.id);
         
+        // Create an abort controller for fetch timeout
+        const abortController = new AbortController();
+        const timeoutId = setTimeout(() => abortController.abort(), 8000);
+        
         // Direct Supabase query with correct table name 'profiles'
         const { data, error } = await supabase
           .from('profiles')
@@ -189,6 +193,8 @@ const EditProfilePage = () => {
           .eq('id', user.id)
           .single();
           
+        clearTimeout(timeoutId);
+        
         if (error) {
           console.error("Error fetching profile directly:", error);
           throw error;
@@ -218,14 +224,15 @@ const EditProfilePage = () => {
             linkedin: extractUsername(data.linkedin_url || '', 'linkedin'),
             github: extractUsername(data.github_url || '', 'github')
           });
-          
-          // Set avatar previews
-          setAvatarPreviews(getAvatarPreviews(data.username || ''));
         }
       } catch (error) {
         console.error("Failed to fetch profile data:", error);
         if (isMounted) {
-          setLoadError("Could not load your profile data. Please try again.");
+          if (error.name === 'AbortError') {
+            setLoadError(t('editProfile.errors.timeout', 'Loading took too long. Please try refreshing the page.'));
+          } else {
+            setLoadError("Could not load your profile data. Please try again.");
+          }
         }
       } finally {
         if (isMounted) {
@@ -239,9 +246,14 @@ const EditProfilePage = () => {
     return () => {
       isMounted = false;
     };
-  }, [user, supabaseConnected]);
+  }, [user, supabaseConnected, t]);
   
-  // Effect to populate form data when profile is loaded through context
+  // Update avatar previews when username changes
+  const avatarPreviews = useMemo(() => {
+    return formData.username ? getAvatarPreviews(formData.username) : [];
+  }, [formData.username]);
+  
+  // Remove the separate state and effect for avatarPreviews
   useEffect(() => {
     if (profile && !pageLoading) {
       console.log("Using profile data from context:", profile);
@@ -265,18 +277,8 @@ const EditProfilePage = () => {
         linkedin: extractUsername(profile.linkedin_url || '', 'linkedin'),
         github: extractUsername(profile.github_url || '', 'github')
       });
-      
-      // Set avatar previews
-      setAvatarPreviews(getAvatarPreviews(profile.username || ''));
     }
   }, [profile, pageLoading]);
-  
-  // Update avatar previews when username changes
-  useEffect(() => {
-    if (formData.username) {
-      setAvatarPreviews(getAvatarPreviews(formData.username));
-    }
-  }, [formData.username]);
   
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -346,7 +348,55 @@ const EditProfilePage = () => {
   };
   
   const handleRetry = () => {
-    window.location.reload();
+    // Clear any previous errors
+    setLoadError(null);
+    // Reset loading state
+    setPageLoading(true);
+    // Reset connection state to trigger recheck
+    setSupabaseConnected(true);
+    
+    // First check the connection
+    const checkConnection = async () => {
+      try {
+        const { data, error } = await supabase.from('profiles').select('count', { count: 'exact', head: true });
+        
+        if (error) {
+          console.error("Retry - Supabase connection error:", error);
+          setSupabaseConnected(false);
+          setLoadError(t('editProfile.errors.connection', 'Could not connect to database. Please check your internet connection.'));
+          setPageLoading(false);
+        } else {
+          console.log("Retry - Supabase connection successful");
+          setSupabaseConnected(true);
+          // If we have the user, fetch their profile
+          if (user) {
+            fetchUserProfile(user.id); // Use the context method if available
+            // Reset timeout for loading
+            if (timeoutRef.current) {
+              clearTimeout(timeoutRef.current);
+            }
+            timeoutRef.current = setTimeout(() => {
+              if (pageLoading) {
+                console.warn("Retry - Loading timeout reached");
+                setPageLoading(false);
+                setLoadError(t('editProfile.errors.timeout', 'Loading took too long. Please try refreshing the page.'));
+              }
+            }, 20000);
+          } else {
+            // No user, can't load profile
+            setPageLoading(false);
+            navigate('/profile');
+          }
+        }
+      } catch (error) {
+        console.error("Retry - Connection check failed:", error);
+        setSupabaseConnected(false);
+        setLoadError(t('editProfile.errors.connection', 'Could not connect to database. Please check your internet connection.'));
+        setPageLoading(false);
+      }
+    };
+    
+    checkConnection();
   };
   
   const validateUsername = (username) => {

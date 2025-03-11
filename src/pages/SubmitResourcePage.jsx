@@ -76,7 +76,12 @@ const SubmitResourcePage = () => {
             user_id: user.id,
             approved: false,
           },
-        ])
+        ], { 
+          headers: { 
+            'Content-Type': 'application/json',
+            'Accept': 'application/json' 
+          }
+        })
         .select();
         
       if (error) throw error;

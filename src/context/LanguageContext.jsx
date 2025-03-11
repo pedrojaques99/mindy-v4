@@ -228,6 +228,31 @@ export const LanguageProvider = ({ children }) => {
       return current && current[key] !== undefined ? current[key] : undefined;
     }, obj);
   };
+  
+  // Helper function to deeply merge objects (for fallback translations)
+  const mergeDeep = (target, source) => {
+    const isObject = obj => obj && typeof obj === 'object' && !Array.isArray(obj);
+    
+    if (!isObject(target) || !isObject(source)) {
+      return source === undefined ? target : source;
+    }
+    
+    const output = { ...target };
+    
+    Object.keys(source).forEach(key => {
+      if (isObject(source[key])) {
+        if (!(key in target)) {
+          output[key] = source[key];
+        } else {
+          output[key] = mergeDeep(target[key], source[key]);
+        }
+      } else {
+        output[key] = source[key];
+      }
+    });
+    
+    return output;
+  };
 
   // Load translations for current language
   const loadTranslations = async (langCode) => {
@@ -250,50 +275,48 @@ export const LanguageProvider = ({ children }) => {
         return FALLBACK_TRANSLATIONS[langCode] || FALLBACK_TRANSLATIONS.en;
       }
       
-      if (!Array.isArray(data) || data.length === 0) {
+      if (!data || data.length === 0) {
         console.warn(`No translations found for ${langCode}, using fallback`);
         return FALLBACK_TRANSLATIONS[langCode] || FALLBACK_TRANSLATIONS.en;
       }
-
-      // Transform data into a nested object structure
+      
+      // Process the translation data
       const translationData = {};
       
-      data.forEach(item => {
-        try {
-          if (!item || typeof item.key !== 'string' || !item.value) {
+      try {
+        for (const item of data) {
+          if (!item.key || !item.value) {
             console.warn('Invalid translation item:', item);
-            return;
+            continue;
           }
-
+          
+          // Build nested object structure from dot notation
           const keys = item.key.split('.');
           let current = translationData;
           
-          // Create nested structure
+          // Create nested objects for all but the last key
           for (let i = 0; i < keys.length - 1; i++) {
             const key = keys[i];
-            // If current key points to a string, convert it to an object
-            if (typeof current[key] === 'string') {
-              const oldValue = current[key];
-              current[key] = { _value: oldValue };
-            }
-            // Create object if it doesn't exist
             current[key] = current[key] || {};
             current = current[key];
           }
           
-          // Set the final value
-          const lastKey = keys[keys.length - 1];
-          if (typeof current === 'object') {
-            current[lastKey] = item.value;
-          }
-        } catch (err) {
-          console.warn('Error processing translation item:', item, err);
+          // Set the value at the final key
+          current[keys[keys.length - 1]] = item.value;
         }
-      });
+      } catch (err) {
+        console.warn('Error processing translation item:', err);
+      }
       
-      return translationData;
+      // Important: merge with fallback translations for better coverage
+      const fallback = FALLBACK_TRANSLATIONS[langCode] || FALLBACK_TRANSLATIONS.en;
+      const merged = mergeDeep(fallback, translationData);
+      
+      console.log(`Loaded ${data.length} translations for ${langCode}, merged with fallbacks`);
+      return merged;
+      
     } catch (error) {
-      console.error('Error loading translations:', error);
+      console.error(`Error loading translations for ${langCode}:`, error);
       return FALLBACK_TRANSLATIONS[langCode] || FALLBACK_TRANSLATIONS.en;
     }
   };
@@ -305,37 +328,35 @@ export const LanguageProvider = ({ children }) => {
         setLoading(true);
         let selectedLang = languages.en; // Always start with English as default
         
-        // First check user profile if logged in
+        // Check user profile language first
         if (profile?.language && languages[profile.language]) {
           selectedLang = languages[profile.language];
-        }
-        // Then check localStorage
-        else if (typeof window !== 'undefined' && !user) {
+        } else {
+          // Check localStorage for preferred language
           const storedLang = localStorage.getItem('preferredLanguage');
           if (storedLang && languages[storedLang]) {
             selectedLang = languages[storedLang];
           }
-          // We're no longer checking browser language by default
-          // This ensures English is the default unless explicitly changed
+          // We can also check browser language as a fallback
+          else {
+            const browserLang = navigator.language?.split('-')[0].toLowerCase();
+            if (browserLang && languages[browserLang]) {
+              selectedLang = languages[browserLang];
+            }
+          }
         }
         
-        // Always load English translations first as a base
-        const englishTranslations = await loadTranslations('en');
+        console.log(`Initializing language: ${selectedLang.code}`);
         
-        // If the selected language is not English, load and merge with English
-        if (selectedLang.code !== 'en') {
-          const langTranslations = await loadTranslations(selectedLang.code);
-          // Merge English with the selected language, giving priority to the selected language
-          const mergedTranslations = { ...englishTranslations, ...langTranslations };
-          setTranslations(mergedTranslations);
-        } else {
-          setTranslations(englishTranslations);
-        }
+        // Load translations for the selected language
+        const translationsData = await loadTranslations(selectedLang.code);
         
+        // Save the results
+        setTranslations(translationsData);
         setCurrentLanguage(selectedLang);
       } catch (error) {
         console.error('Error initializing language:', error);
-        // Default to English on error
+        
         toast.error('Failed to load translations. Using English fallback.');
         setCurrentLanguage(languages.en);
         setTranslations(FALLBACK_TRANSLATIONS.en);
@@ -343,9 +364,9 @@ export const LanguageProvider = ({ children }) => {
         setLoading(false);
       }
     };
-
+    
     initLanguage();
-  }, [profile, user]);
+  }, [profile]);
 
   // Change language function
   const changeLanguage = async (langCode) => {
@@ -353,40 +374,32 @@ export const LanguageProvider = ({ children }) => {
     
     try {
       setLoading(true);
+      
       const newLang = languages[langCode];
       
-      // Always load English translations first as a base
-      const englishTranslations = await loadTranslations('en');
+      // Load translations for the new language
+      const translationsData = await loadTranslations(langCode);
       
-      // If the selected language is not English, load and merge with English
-      if (langCode !== 'en') {
-        const langTranslations = await loadTranslations(langCode);
-        // Merge English with the selected language, giving priority to the selected language
-        const mergedTranslations = { ...englishTranslations, ...langTranslations };
-        setTranslations(mergedTranslations);
-      } else {
-        setTranslations(englishTranslations);
-      }
-      
+      // Update state with new language and translations
+      setTranslations(translationsData);
       setCurrentLanguage(newLang);
       
-      // Update user preference in Supabase if logged in
+      // Update user profile if logged in
       if (user) {
-        await updateUserProfile({ language: langCode });
+        try {
+          await updateUserProfile({ language: langCode });
+        } catch (error) {
+          console.warn('Could not update user profile language:', error);
+        }
       }
       
-      // Always store in localStorage for persistence if in browser
-      if (typeof window !== 'undefined') {
-        localStorage.setItem('preferredLanguage', langCode);
-      }
+      // Save preference to localStorage
+      localStorage.setItem('preferredLanguage', langCode);
       
       toast.success(`Language changed to ${newLang.name}`);
     } catch (error) {
       console.error('Error changing language:', error);
       toast.error(`Failed to change language: ${error.message}`);
-      
-      // Use fallback translations
-      setTranslations(FALLBACK_TRANSLATIONS.en);
     } finally {
       setLoading(false);
     }

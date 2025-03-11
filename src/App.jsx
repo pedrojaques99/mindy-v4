@@ -101,18 +101,23 @@ function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [dbInitialized, setDbInitialized] = useState(false);
+  const [useLocalData, setUseLocalData] = useState(false);
 
   useEffect(() => {
     // Initialize database and check connection
     const initializeApp = async () => {
       try {
-        // Check if database is connected
-        const isConnected = await checkSupabaseConnection();
+        console.log('Initializing app...');
         
-        if (!isConnected) {
-          console.warn('Database connection failed. Using fallback data.');
-          // Don't show error toast on initial load to avoid overwhelming the user
-          // toast.error('Database connection failed. Using fallback data.');
+        // Check Supabase connection
+        const connectionResult = await checkSupabaseConnection();
+        
+        if (!connectionResult.success) {
+          console.error('Database connection failed:', connectionResult.error);
+          toast.error('Database connection failed. Using local data.');
+          
+          // Use local data instead of dispatch
+          setUseLocalData(true);
         } else {
           console.log('Database connection successful');
           
@@ -121,39 +126,96 @@ function App() {
           
           if (!isSetUp) {
             console.log('Database not set up. Attempting to set up...');
-            // Set up database
+            
+            // Try to set up database
             try {
               const setupSuccess = await setupDatabase();
               
               if (setupSuccess) {
                 console.log('Database setup successful');
-                // Don't show success toast on initial load
-                // toast.success('Database setup successful');
+                toast.success('Database connected successfully.');
+                
+                // Load data from the database after setup
+                await loadResourcesFromSupabase();
               } else {
                 console.warn('Database setup failed. Using fallback data.');
-                // Don't show error toast on initial load
-                // toast.error('Database setup failed. Using fallback data.');
+                toast.error('Database setup failed. Using local data.');
+                
+                // Use local data instead of dispatch
+                setUseLocalData(true);
               }
             } catch (setupError) {
               console.error('Error setting up database:', setupError);
-              // Continue with fallback data
+              toast.error('Failed to connect to database. Using local data.');
+              
+              // Use local data instead of dispatch
+              setUseLocalData(true);
             }
           } else {
-            console.log('Database already set up');
+            console.log('Database is set up. Loading data from Supabase...');
+            
+            // Load data from the database
+            await loadResourcesFromSupabase();
+            
+            // Small toast to show we're using Supabase
+            toast.success('Connected to Supabase database.', {
+              duration: 2000,
+              icon: '🚀'
+            });
           }
-          
-          setDbInitialized(true);
         }
         
-        // Simulate loading resources
-        setTimeout(() => {
-          setIsLoading(false);
-        }, 1000); // Reduced loading time for better UX
+        // App is initialized at this point
+        setDbInitialized(true);
       } catch (error) {
         console.error('Error initializing app:', error);
-        // Don't show error toast on initial load
-        // toast.error('Error initializing app. Using fallback data.');
+        toast.error('Error initializing app. Using local data.');
+        
+        // Use local data instead of dispatch
+        setUseLocalData(true);
+        setDbInitialized(true);
+      } finally {
+        // Always finish loading
         setIsLoading(false);
+      }
+    };
+    
+    // Helper function to load resources from Supabase
+    const loadResourcesFromSupabase = async () => {
+      try {
+        console.log('Loading resources from Supabase...');
+        
+        // Fetch resources from Supabase with proper headers
+        const { data: resources, error: resourcesError } = await supabase
+          .from('resources')
+          .select('*')
+          .order('created_at', { ascending: false });
+          
+        if (resourcesError) {
+          console.error('Error fetching resources:', resourcesError);
+          throw resourcesError;
+        }
+        
+        if (resources && resources.length > 0) {
+          console.log(`Loaded ${resources.length} resources from Supabase.`);
+          
+          // Use setUseLocalData instead of dispatch
+          setUseLocalData(false);
+          
+          // Store resources in localStorage for offline use
+          try {
+            localStorage.setItem('cachedResources', JSON.stringify(resources));
+            console.log('Resources cached to localStorage');
+          } catch (storageError) {
+            console.warn('Failed to cache resources to localStorage:', storageError);
+          }
+        } else {
+          console.warn('No resources found in Supabase. Using fallback data.');
+          setUseLocalData(true);
+        }
+      } catch (error) {
+        console.error('Error loading resources from Supabase:', error);
+        setUseLocalData(true);
       }
     };
     

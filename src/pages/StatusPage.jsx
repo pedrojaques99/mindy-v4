@@ -104,7 +104,8 @@ const StatusPage = () => {
                 tables.push({ name: tableName, rows: '?', status: 'error', error: error.message });
               }
             } else {
-              tables.push({ name: tableName, rows: data.count || '?', status: 'accessible' });
+              const rowCount = data && data.count !== undefined ? data.count : '?';
+              tables.push({ name: tableName, rows: rowCount, status: 'accessible' });
             }
           } else {
             tables.push({ name: tableName, rows: '?', status: 'error', error: result.reason.message });

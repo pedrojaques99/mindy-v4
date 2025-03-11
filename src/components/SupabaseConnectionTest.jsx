@@ -14,6 +14,98 @@ const SupabaseConnectionTest = () => {
   useEffect(() => {
     const testConnection = async () => {
       try {
+        const supabaseUrl = supabase.supabaseUrl;
+        console.log('Testing connection to Supabase:', supabaseUrl);
+        
+        // First check if network is available
+        try {
+          const networkTest = await fetch('https://www.google.com', { 
+            method: 'HEAD',
+            mode: 'no-cors',
+            cache: 'no-cache',
+            timeout: 5000
+          });
+          console.log('Network connection available');
+        } catch (networkError) {
+          console.error('Network connectivity issue detected:', networkError);
+          setConnectionStatus('failed');
+          setError('Internet connection appears to be unavailable. Please check your network connectivity.');
+          return;
+        }
+        
+        // Handle MCP server separately
+        if (supabaseUrl.includes('mcp-supabase-server')) {
+          console.log('Using MCP Supabase server');
+          
+          // First try with a short timeout to test if the server is responsive
+          try {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000);
+            
+            const response = await fetch(`${supabaseUrl}/ping`, {
+              method: 'GET',
+              signal: controller.signal,
+              headers: {
+                'Content-Type': 'application/json'
+              }
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!response.ok) {
+              throw new Error(`MCP server responded with status: ${response.status}`);
+            }
+            
+            console.log('MCP server is responsive');
+          } catch (pingError) {
+            console.error('MCP server ping failed:', pingError);
+            setConnectionStatus('failed');
+            setError(`Cannot connect to MCP server: ${pingError.message}. The server might be down or unreachable.`);
+            return;
+          }
+          
+          // Try a simple query that should work with MCP server
+          const { data, error } = await supabase
+            .from('resources')
+            .select('*')
+            .limit(1);
+          
+          if (error) throw error;
+          
+          console.log('MCP server connection successful:', data);
+          setConnectionStatus('connected');
+          
+          // Fetch resources for display
+          const { data: resourcesData, error: resourcesError } = await supabase
+            .from('resources')
+            .select('*')
+            .limit(5);
+            
+          if (resourcesError) throw resourcesError;
+          setResources(resourcesData || []);
+          
+          // Get statistics
+          const { data: allResources, error: statsError } = await supabase
+            .from('resources')
+            .select('category, subcategory');
+            
+          if (statsError) throw statsError;
+          
+          // Calculate stats
+          const totalCount = allResources.length;
+          const categories = [...new Set(allResources.map(r => r.category))];
+          const subcategories = [...new Set(allResources.map(r => r.subcategory))];
+          
+          setStats({
+            totalResources: totalCount,
+            categories,
+            subcategories
+          });
+          
+          return;
+        }
+        
+        // Standard connection test (non-MCP)
         // Test connection by fetching a single resource
         const { data, error } = await supabase
           .from('resources')
