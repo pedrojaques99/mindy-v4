@@ -351,11 +351,6 @@ export default function ResourcePage() {
       if (result.success) {
         console.log(`Successfully ${result.isFavorited ? 'added to' : 'removed from'} favorites`);
         setIsFavorited(result.isFavorited);
-        toast.success(
-          result.isFavorited 
-            ? t('resource.favorites.added', 'Added to favorites') 
-            : t('resource.favorites.removed', 'Removed from favorites')
-        );
       } else if (result.authError) {
         // Handle authentication errors
         console.error('Authentication error when toggling favorite:', result.error);
@@ -363,14 +358,11 @@ export default function ResourcePage() {
       } else if (result.policyError) {
         // Handle row-level security policy errors
         console.error('Policy error when toggling favorite:', result.error);
-        
-        // Use the message from the result if available, or a default message
-        const errorMessage = result.message || t('errors.permissionDenied', 'You do not have permission to perform this action.');
-        toast.error(errorMessage);
+        toast.error(t('errors.permissionDenied', 'You do not have permission to perform this action.'));
       } else {
         // Handle other errors
         console.error('Error toggling favorite:', result.error);
-        toast.error(result.message || t('common.error', 'An error occurred. Please try again.'));
+        toast.error(t('common.error', 'An error occurred. Please try again.'));
       }
     } catch (error) {
       console.error('Unexpected error in handleToggleFavorite:', error);
@@ -665,53 +657,4 @@ export default function ResourcePage() {
                         <div className="flex flex-wrap gap-3">
                           {resource.category && (
                             <button
-                              onClick={() => navigate(`/category/${resource.category}`)}
-                              className="flex items-center px-4 py-2 rounded-md bg-dark-300 text-white hover:bg-dark-400 transition-colors text-sm"
-                            >
-                              {resource.category}
-                            </button>
-                          )}
-                          {resource.subcategory && (
-                            <button
-                              onClick={() => navigate(`/category/${resource.subcategory}`)}
-                              className="flex items-center px-4 py-2 rounded-md bg-dark-300 text-white hover:bg-dark-400 transition-colors text-sm"
-                            >
-                              {resource.subcategory}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-          
-          {/* Comments Section */}
-          <div className="mt-8">
-            <CommentSection 
-              comments={comments} 
-              resourceId={resource.id}
-              isLoading={isLoadingComments}
-              onCommentAdded={() => fetchComments(resource.id)}
-            />
-          </div>
-        </div>
-        
-        {/* Sidebar with Related Resources */}
-        <div className="lg:col-span-1">
-          <div className="bg-dark-200 rounded-xl p-6 shadow-xl">
-            <h2 className="text-xl font-medium mb-4 text-white">{t('resource.relatedResources', 'Related Resources')}</h2>
-            
-            <RelatedResources 
-              resources={relatedResources}
-              category={resource.category}
-              currentResourceId={resource.id}
-            />
-          </div>
-        </div>
-      </div>
-    </>
-  );
-}
+                              onClick={() => navigate(`/category/${resource.category}`

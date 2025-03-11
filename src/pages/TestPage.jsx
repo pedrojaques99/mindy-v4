@@ -26,15 +26,16 @@ const TestPage = () => {
       setIsLoading(true);
       setConnectionStatus('Checking...');
       
-      // Check Supabase connection
-      const isConnected = await checkSupabaseConnection();
+      // Check Supabase connection using the centralized function
+      const connectionResult = await checkSupabaseConnection();
       
-      if (isConnected) {
+      if (connectionResult && connectionResult.success) {
         setConnectionStatus('Connected');
-        addTestResult('Database connection', 'Success', 'Connected to Supabase');
+        addTestResult('Database connection', 'Success', `Connected to Supabase (${connectionResult.responseTime}ms)`);
       } else {
         setConnectionStatus('Disconnected');
-        addTestResult('Database connection', 'Failed', 'Could not connect to Supabase');
+        const errorMessage = connectionResult?.error?.message || 'Could not connect to Supabase';
+        addTestResult('Database connection', 'Failed', errorMessage);
         setIsLoading(false);
         return;
       }
@@ -74,6 +75,8 @@ const TestPage = () => {
       setIsLoading(true);
       addTestResult('Direct query', 'Running', 'Testing direct query...');
       
+      const startTime = performance.now();
+      
       // Try a simple direct query to a non-existent table
       // If we get a "relation does not exist" error, that's good!
       const { data, error } = await supabase
@@ -82,19 +85,22 @@ const TestPage = () => {
         .limit(1)
         .maybeSingle();
       
+      const endTime = performance.now();
+      const responseTime = Math.round(endTime - startTime);
+      
       if (error) {
         if (error.code === '42P01') {
           // This is actually good - it means we connected but the table doesn't exist
-          addTestResult('Direct query', 'Success', 'Connected to database (table does not exist)');
+          addTestResult('Direct query', 'Success', `Connected to database (table does not exist, ${responseTime}ms)`);
           setDirectQueryResult(JSON.stringify(error, null, 2));
         } else {
           // Any other error is a problem
-          addTestResult('Direct query', 'Failed', error.message);
+          addTestResult('Direct query', 'Failed', `${error.message} (${responseTime}ms)`);
           setDirectQueryResult(`Error: ${JSON.stringify(error, null, 2)}`);
         }
       } else {
         // If no error, we somehow have a _dummy_query_for_connection_test_ table!
-        addTestResult('Direct query', 'Success', 'Direct query successful (table exists!)');
+        addTestResult('Direct query', 'Success', `Direct query successful (table exists!, ${responseTime}ms)`);
         setDirectQueryResult(JSON.stringify(data, null, 2));
       }
     } catch (error) {

@@ -5,10 +5,30 @@ import React from 'react';
  * 
  * @param {Object} props
  * @param {string} props.name - The name of the software (case insensitive)
+ * @param {string} props.icon - Path to the icon image (alternative to name)
+ * @param {string} props.altText - Alt text for the icon
+ * @param {string} props.color - Color for the icon
  * @param {string} props.className - Additional CSS classes
  * @returns {JSX.Element} - An SVG icon or text fallback
  */
-export default function SoftwareIcon({ name, className = '' }) {
+export default function SoftwareIcon({ name, icon, altText, color, className = '' }) {
+  // If icon path is provided, render an image
+  if (icon) {
+    return (
+      <img 
+        src={icon} 
+        alt={altText || 'Software icon'} 
+        className={`w-full h-full object-contain ${className}`}
+        style={color ? { filter: `drop-shadow(0px 0px 1px ${color})` } : {}}
+      />
+    );
+  }
+  
+  // If no name is provided, return a placeholder
+  if (!name) {
+    return <span className={`text-xs ${className}`}>Icon</span>;
+  }
+  
   const normalizedName = name.toLowerCase().trim();
   
   // Map of software names to their SVG icons

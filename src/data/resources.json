@@ -1,0 +1,35 @@
+[
+  {
+    "id": "local-1",
+    "title": "Sample Design Resource",
+    "description": "This is a sample resource for design projects when offline.",
+    "url": "https://example.com/design",
+    "image": "https://via.placeholder.com/600x400?text=Design+Resource",
+    "category": "assets",
+    "tags": ["design", "ui", "graphics"],
+    "created_at": "2023-01-01T00:00:00.000Z",
+    "created_by": "system"
+  },
+  {
+    "id": "local-2",
+    "title": "Sample Development Tool",
+    "description": "A sample development tool for offline mode.",
+    "url": "https://example.com/dev",
+    "image": "https://via.placeholder.com/600x400?text=Development+Tool",
+    "category": "tools",
+    "tags": ["coding", "development", "frontend"],
+    "created_at": "2023-01-02T00:00:00.000Z",
+    "created_by": "system"
+  },
+  {
+    "id": "local-3",
+    "title": "Sample Learning Resource",
+    "description": "Sample learning material for fallback usage.",
+    "url": "https://example.com/learn",
+    "image": "https://via.placeholder.com/600x400?text=Learning+Resource",
+    "category": "learn",
+    "tags": ["tutorial", "education", "course"],
+    "created_at": "2023-01-03T00:00:00.000Z",
+    "created_by": "system"
+  }
+] 

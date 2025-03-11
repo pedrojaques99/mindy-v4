@@ -5,6 +5,46 @@ import toast from 'react-hot-toast';
  * Utility functions for working with resources in Supabase
  */
 
+/**
+ * Check if a user is currently authenticated
+ * @returns {Promise<Object>} Authentication status object
+ */
+export const checkAuthStatus = async () => {
+  try {
+    // Use the current method from Supabase v2
+    const { data, error } = await supabase.auth.getSession();
+    
+    if (error) {
+      console.error("Error checking authentication status:", error);
+      return {
+        authenticated: false,
+        error,
+        message: "Failed to verify authentication status"
+      };
+    }
+    
+    if (!data.session) {
+      return {
+        authenticated: false,
+        message: "No active session found"
+      };
+    }
+    
+    return {
+      authenticated: true,
+      user: data.session.user,
+      session: data.session
+    };
+  } catch (error) {
+    console.error("Unexpected error checking auth status:", error);
+    return {
+      authenticated: false,
+      error,
+      message: "An error occurred while checking authentication"
+    };
+  }
+};
+
 // Get a single resource by ID
 export const getResourceById = async (id) => {
   if (!id) {
@@ -144,94 +184,256 @@ export const getResourcesByCategory = async (category) => {
   }
 };
 
-// Track resource view
-export const trackResourceView = async (resourceId, userId) => {
-  if (!resourceId || !userId) {
-    return { success: false, message: 'Resource ID and User ID are required' };
+/**
+ * Track a view of a resource by a user
+ * @param {string} resourceId - ID of the resource
+ * @param {string} userId - ID of the user (optional, if authenticated)
+ * @returns {Promise<Object>} Result object with success status and error info
+ */
+export const trackResourceView = async (resourceId, userId = null) => {
+  // Validate the resource ID is provided
+  if (!resourceId) {
+    console.error("resourceId must be provided to trackResourceView function");
+    return {
+      success: false,
+      error: "Missing resource ID",
+      message: "Cannot track view without resource ID",
+    };
   }
 
   try {
-    const { error } = await supabase
-      .from('resource_views')
-      .insert([
-        { resource_id: resourceId, user_id: userId }
-      ], { 
-        headers: { 
-          'Content-Type': 'application/json',
-          'Accept': 'application/json' 
+    console.log(`Tracking view for resource ${resourceId}${userId ? ` by user ${userId}` : ' (anonymous)'}`);
+    
+    // Check authentication status if no userId provided
+    if (!userId) {
+      const authStatus = await checkAuthStatus();
+      if (authStatus.authenticated && authStatus.user?.id) {
+        userId = authStatus.user.id;
+      } else {
+        console.log("User not authenticated when tracking resource view");
+      }
+    }
+    
+    // Track anonymous view first - this always works regardless of auth
+    const { error: incrementError } = await supabase.rpc('increment_resource_popularity', {
+      resource_id: resourceId
+    });
+    
+    if (incrementError) {
+      console.warn("Failed to increment resource popularity:", incrementError);
+      // Non-critical error, we can continue
+    }
+    
+    // If we have a userId, also track the specific user view
+    if (userId) {
+      const { error: viewError } = await supabase
+        .from('resource_views')
+        .insert([
+          { resource_id: resourceId, user_id: userId }
+        ]);
+        
+      if (viewError) {
+        // Check for policy violations
+        if (viewError.code === '42501' || viewError.message?.includes('policy')) {
+          console.warn("RLS policy prevented tracking user view:", viewError);
+          // This is non-critical, we already tracked anonymous view
+          return {
+            success: true,
+            partial: true,
+            message: "View counted anonymously due to permissions"
+          };
         }
-      });
-
-    if (error) {
-      // Log but don't fail the operation - tracking views is non-critical
-      console.error('Error tracking resource view:', error);
-      return { success: false, error, critical: false };
+        
+        // Check for auth errors
+        if (viewError.code === '401' || viewError.message?.includes('auth') || viewError.message?.includes('session')) {
+          console.warn("Authentication error when tracking view:", viewError);
+          return {
+            success: true,
+            partial: true, 
+            message: "View counted anonymously due to authentication issue"
+          };
+        }
+        
+        console.error("Error tracking resource view:", viewError);
+        return {
+          success: true,
+          partial: true,
+          error: viewError,
+          message: "View tracked anonymously only"
+        };
+      }
     }
-
-    try {
-      // Try to increment popularity via RPC
-      await supabase.rpc('increment_popularity', { resource_id: resourceId });
-    } catch (rpcError) {
-      console.error('Error incrementing popularity:', rpcError);
-      // Non-critical operation, continue
-    }
-
-    return { success: true };
+    
+    return {
+      success: true,
+      anonymous: !userId,
+      message: userId ? "View tracked successfully" : "Anonymous view tracked"
+    };
   } catch (error) {
-    console.error('Unexpected error tracking resource view:', error);
-    return { success: false, error, critical: false };
+    console.error("Unexpected error in trackResourceView:", error);
+    return {
+      success: false,
+      error,
+      message: "Failed to track resource view"
+    };
   }
 };
 
-// Toggle favorite status
-export const toggleFavorite = async (resourceId, userId, currentStatus) => {
+/**
+ * Toggle a resource's favorite status for a user
+ * @param {string} resourceId - ID of the resource
+ * @param {string} userId - ID of the user
+ * @param {boolean} currentStatus - Current favorite status (optional)
+ * @returns {Promise<Object>} Result object with success status and error info
+ */
+export const toggleFavorite = async (resourceId, userId, currentStatus = null) => {
+  // Validate inputs
   if (!resourceId || !userId) {
-    toast.error('You must be logged in to favorite resources');
-    return { success: false, message: 'Resource ID and User ID are required' };
+    console.error("Both resourceId and userId must be provided to toggleFavorite function");
+    return {
+      success: false,
+      error: "Missing required parameters",
+      message: "Unable to update favorite status due to missing information",
+    };
   }
 
+  // Check authentication status
+  const authStatus = await checkAuthStatus();
+  if (!authStatus.authenticated) {
+    console.warn("User not authenticated when attempting to toggle favorite");
+    return {
+      success: false,
+      authError: true,
+      error: "User not authenticated",
+      message: "You must be signed in to add favorites",
+    };
+  }
+
+  // First, try to use our RPC function if available
   try {
-    if (currentStatus) {
-      // Remove from favorites
-      const { error } = await supabase
+    console.log(`Attempting to toggle favorite for resource ${resourceId} by user ${userId}, current status: ${currentStatus}`);
+    
+    // First check if the user has a valid session
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      return {
+        success: false,
+        authError: true,
+        error: "No active session",
+        message: "You must be signed in to add favorites",
+      };
+    }
+    
+    // Try the RPC function first
+    const { data, error } = await supabase.rpc('toggle_favorite', {
+      p_resource_id: resourceId,
+      p_user_id: userId
+    });
+    
+    if (!error) {
+      return {
+        success: true,
+        isFavorited: data,
+      };
+    } else {
+      // If RPC call fails, fall back to direct operations
+      console.warn("RPC toggle_favorite failed, falling back to direct operations", error);
+    }
+    
+    // Determine if we're adding or removing based on current status
+    const isRemoving = currentStatus === true;
+    
+    if (isRemoving) {
+      // Remove favorite
+      const { error: removeError } = await supabase
         .from('favorites')
         .delete()
-        .eq('user_id', userId)
-        .eq('resource_id', resourceId);
-
-      if (error) {
-        console.error('Error removing favorite:', error);
-        toast.error('Failed to remove from favorites');
-        return { success: false, error };
+        .eq('resource_id', resourceId)
+        .eq('user_id', userId);
+        
+      if (removeError) {
+        console.error("Error removing favorite:", removeError);
+        
+        // Check for permission denied or RLS policy violation
+        if (removeError.code === '42501' || removeError.message?.includes('policy')) {
+          return {
+            success: false,
+            policyError: true,
+            error: removeError,
+            message: "You don't have permission to remove this favorite",
+          };
+        }
+        
+        // Check for auth/session errors
+        if (removeError.code === '401' || removeError.message?.includes('auth') || removeError.message?.includes('session')) {
+          return {
+            success: false,
+            authError: true,
+            error: removeError,
+            message: "Your session has expired. Please sign in again.",
+          };
+        }
+        
+        return {
+          success: false,
+          error: removeError,
+          message: "Failed to remove from favorites",
+        };
       }
-
-      toast('Removed from favorites', { icon: '💔' });
-      return { success: true, isFavorited: false };
+      
+      return {
+        success: true,
+        isFavorited: false,
+      };
     } else {
-      // Add to favorites
-      const { error } = await supabase
+      // Add favorite
+      const { error: addError } = await supabase
         .from('favorites')
         .insert([
-          { user_id: userId, resource_id: resourceId }
-        ], { 
-          headers: { 
-            'Content-Type': 'application/json',
-            'Accept': 'application/json' 
-          }
-        });
-
-      if (error) {
-        console.error('Error adding favorite:', error);
-        toast.error('Failed to add to favorites');
-        return { success: false, error };
+          { resource_id: resourceId, user_id: userId }
+        ]);
+        
+      if (addError) {
+        console.error("Error adding favorite:", addError);
+        
+        // Check for permission denied or RLS policy violation
+        if (addError.code === '42501' || addError.message?.includes('policy')) {
+          return {
+            success: false,
+            policyError: true,
+            error: addError,
+            message: "You don't have permission to add this favorite. This may be due to a Row Level Security policy.",
+          };
+        }
+        
+        // Check for auth/session errors
+        if (addError.code === '401' || addError.message?.includes('auth') || addError.message?.includes('session')) {
+          return {
+            success: false,
+            authError: true,
+            error: addError,
+            message: "Your session has expired. Please sign in again.",
+          };
+        }
+        
+        return {
+          success: false,
+          error: addError,
+          message: "Failed to add to favorites",
+        };
       }
-
-      toast('Added to favorites', { icon: '❤️' });
-      return { success: true, isFavorited: true };
+      
+      return {
+        success: true,
+        isFavorited: true,
+      };
     }
   } catch (error) {
-    console.error('Unexpected error toggling favorite:', error);
-    toast.error('Something went wrong');
-    return { success: false, error };
+    console.error("Unexpected error in toggleFavorite:", error);
+    return {
+      success: false,
+      error,
+      message: "An unexpected error occurred while updating favorites",
+    };
   }
 }; 

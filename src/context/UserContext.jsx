@@ -52,10 +52,20 @@ export const UserProvider = ({ children }) => {
     // Check for active session on mount
     const checkSession = async () => {
       try {
-        const { data } = await supabase.auth.getSession();
-        if (data.session) {
+        const { data, error } = await supabase.auth.getSession();
+        
+        if (error) {
+          console.error('Error getting session:', error);
+          setLoading(false);
+          return;
+        }
+        
+        if (data?.session) {
+          console.log('Found existing session');
           setUser(data.session.user);
           await fetchUserProfile(data.session.user.id);
+        } else {
+          console.log('No active session found');
         }
       } catch (error) {
         console.error('Error checking session:', error);
@@ -69,18 +79,35 @@ export const UserProvider = ({ children }) => {
     // Set up auth state listener
     const { data: authListener } = supabase.auth.onAuthStateChange(
       async (event, session) => {
-        console.log('Auth state changed:', event);
-        if (event === 'SIGNED_IN' && session) {
-          setUser(session.user);
-          await fetchUserProfile(session.user.id);
-          toast.success('Signed in successfully!');
+        console.log('Auth state changed:', event, session ? 'with session' : 'no session');
+        
+        // Handle session events
+        if (session) {
+          if (event === 'SIGNED_IN') {
+            setUser(session.user);
+            await fetchUserProfile(session.user.id);
+            toast.success('Signed in successfully!');
+          } else if (event === 'USER_UPDATED') {
+            setUser(session.user);
+            await fetchUserProfile(session.user.id);
+            toast.success('Profile updated!');
+          } else if (event === 'TOKEN_REFRESHED') {
+            console.log('Auth token refreshed automatically');
+            // Update user state with fresh session data
+            setUser(session.user);
+          }
         } else if (event === 'SIGNED_OUT') {
+          // Clear user state on sign out
           setUser(null);
           setProfile(null);
           toast.success('Signed out successfully!');
-        } else if (event === 'USER_UPDATED' && session) {
-          setUser(session.user);
-          await fetchUserProfile(session.user.id);
+          
+          // Clear any cached user data
+          try {
+            localStorage.removeItem('user-profile-cache');
+          } catch (e) {
+            console.warn('Failed to clear user profile cache:', e);
+          }
         }
       }
     );
@@ -94,15 +121,26 @@ export const UserProvider = ({ children }) => {
 
   const signIn = async ({ email, password }) => {
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      setLoading(true);
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+      
+      // Make sure we update the state immediately rather than waiting for the listener
+      if (data.session) {
+        setUser(data.session.user);
+        await fetchUserProfile(data.session.user.id);
+      }
+      
       return { success: true };
     } catch (error) {
+      console.error('Sign in error:', error);
       return { success: false, error: error.message };
+    } finally {
+      setLoading(false);
     }
   };
 

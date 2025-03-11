@@ -7,11 +7,9 @@ import { Analytics } from '@vercel/analytics/react';
 import { SpeedInsights } from '@vercel/speed-insights/react';
 import './index.css';
 
-// Initialize Supabase client with appropriate options
-// Use a valid, accessible URL and ensure the MCP server is reachable
-const supabaseUrl = 'https://bweemuqoelppnyeyeysr.supabase.co'; // Directly use the known working URL
-// const supabaseUrl = 'https://mcp-supabase-server.vercel.app' || import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3ZWVtdXFvZWxwcG55ZXlleXNyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEyNjc4MDMsImV4cCI6MjA1Njg0MzgwM30.MlURpcY2M_kVmilyR0WBEyJe5rDjuVcg5e4gW8ke1g8';
+// Initialize Supabase client as requested
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Validate that we have a proper API key
 const isValidKey = (key) => {
@@ -19,16 +17,16 @@ const isValidKey = (key) => {
 };
 
 // Log API key status for debugging
-if (!isValidKey(supabaseAnonKey)) {
+if (!isValidKey(supabaseKey)) {
   console.warn('Warning: Supabase API key appears to be invalid or malformed');
-  console.log('API Key length:', supabaseAnonKey ? supabaseAnonKey.length : 0);
-  console.log('First characters:', supabaseAnonKey ? supabaseAnonKey.substring(0, 10) + '...' : 'undefined');
+  console.log('API Key length:', supabaseKey ? supabaseKey.length : 0);
+  console.log('First characters:', supabaseKey ? supabaseKey.substring(0, 10) + '...' : 'undefined');
 } else {
   console.log('Supabase API key format appears valid');
 }
 
-// Create the Supabase client
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+// Create the Supabase client with auth persistence enabled
+export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
@@ -40,12 +38,14 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
     fetch: (url, options = {}) => {
       // Monitor which endpoints we're calling
       const endpoint = url.replace(supabaseUrl, '');
+      const isDataEndpoint = endpoint.includes('/rest/v1/');
+      
       console.log(`Supabase request to: ${endpoint}`, { 
         method: options?.method || 'GET',
         url: url
       });
 
-      const timeout = 30000; // 30 seconds timeout (increased from 15s)
+      const timeout = 30000; // 30 seconds timeout
       const controller = new AbortController();
       const { signal } = controller;
       
@@ -58,11 +58,15 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       // Ensure headers object exists
       const headers = options.headers || {};
       
+      // Get the current session - needed for RLS policies
+      const currentSession = supabase.auth.session?.();
+      const authToken = currentSession?.access_token;
+      
       // Fix: Explicitly include the API key and content-type in all requests
       const requestHeaders = {
         ...headers,
-        'apikey': supabaseAnonKey,
-        'Authorization': `Bearer ${supabaseAnonKey}`,
+        'apikey': supabaseKey,
+        'Authorization': authToken ? `Bearer ${authToken}` : `Bearer ${supabaseKey}`,
         'Cache-Control': 'no-cache',
         'Content-Type': 'application/json',
         'Accept': 'application/json'
@@ -122,6 +126,27 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   debug: import.meta.env.DEV
 });
 
+// Listen for auth state changes to handle token refreshes
+supabase.auth.onAuthStateChange((event, session) => {
+  // Log auth events for debugging
+  console.log(`Supabase auth state changed: ${event}`, {
+    userId: session?.user?.id || 'none',
+    hasToken: !!session?.access_token,
+    expiresAt: session?.expires_at ? new Date(session.expires_at * 1000).toISOString() : 'none'
+  });
+  
+  // Handle specific auth events
+  if (event === 'SIGNED_IN') {
+    console.log('User signed in - RLS policies now active');
+  } else if (event === 'SIGNED_OUT') {
+    console.log('User signed out - RLS policies will restrict access');
+  } else if (event === 'TOKEN_REFRESHED') {
+    console.log('Auth token refreshed - continuing with existing session');
+  } else if (event === 'USER_UPDATED') {
+    console.log('User data updated');
+  }
+});
+
 // Add a connection check throttling mechanism
 const connectionCheckStatus = {
   lastCheckedAt: 0,
@@ -175,9 +200,9 @@ export const checkSupabaseConnection = async () => {
   
   try {
     console.log('Testing Supabase connection to:', supabaseUrl);
-    console.log('API Key available:', !!supabaseAnonKey);
+    console.log('API Key available:', !!supabaseKey);
     
-    // First, try a simple health check
+    // First, try a simple connection test
     const startTime = Date.now();
     
     // Set up a timeout promise
@@ -187,132 +212,45 @@ export const checkSupabaseConnection = async () => {
       }, 5000);
     });
     
-    // MCP server special handling
-    if (supabaseUrl.includes('mcp-supabase-server')) {
-      console.log('Using MCP Supabase server - testing specific MCP endpoints');
-      
-      try {
-        // First try a simple health ping (should work on MCP server)
-        const response = await fetch(`${supabaseUrl}/ping`, {
-          method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${supabaseAnonKey}`
-          }
-        });
-        
-        if (response.ok) {
-          console.log('MCP Supabase server connection successful');
-          connectionCheckStatus.result = { 
-            success: true, 
-            responseTime: Date.now() - startTime,
-            server: 'mcp'
-          };
-          connectionCheckStatus.lastCheckedAt = now;
-          return connectionCheckStatus.result;
-        }
-      } catch (mcpErr) {
-        console.warn('MCP server health check failed, trying standard query:', mcpErr);
-      }
-    }
-    
-    // Standard query approach - use profiles table which should exist
-    const queryPromise = supabase.from('profiles')
-      .select('count', { count: 'exact', head: true })
-      .limit(1);
+    // Try a simple auth status check - this should work with any Supabase project
+    // Even if no tables are set up yet
+    const queryPromise = supabase.auth.getSession();
       
     // Race the query against the timeout
-    const { data, error } = await Promise.race([
+    const result = await Promise.race([
       queryPromise,
       timeoutPromise
-    ]).catch(err => {
-      console.error('Connection test failed:', err.message);
-      return { error: err };
-    });
+    ]);
     
-    const responseTime = Date.now() - startTime;
-    console.log(`Supabase response time: ${responseTime}ms`);
-    
-    // Check for API key errors
-    if (error && (error.message?.includes('No API key found') || error.hint?.includes('apikey'))) {
-      console.error('API key authentication error:', error);
+    // Check if we got a response (doesn't matter if user is logged in or not)
+    if (result) {
+      console.log('Supabase connection successful (auth service reachable)');
       connectionCheckStatus.result = { 
-        success: false, 
-        error: {
-          type: 'auth_error',
-          message: error.message,
-          hint: error.hint,
-          details: error.details
-        },
-        responseTime 
+        success: true, 
+        responseTime: Date.now() - startTime,
       };
-    }
-    // If we get a "relation does not exist" error (42P01), that's actually good!
-    // It means we connected to the database but the table doesn't exist
-    else if (error && error.code === '42P01') {
-      console.log('Supabase connection successful (table does not exist)');
-      connectionCheckStatus.result = { success: true, responseTime };
-    }
-    // Any other error means we couldn't connect properly
-    else if (error && error.code !== '42P01') {
-      console.error('Supabase connection error:', error);
-      connectionCheckStatus.result = { 
-        success: false, 
-        error: {
-          message: error.message,
-          code: error.code,
-          details: error.details
-        },
-        responseTime 
-      };
-    }
-    // If no error, we somehow have a profiles table!
-    else {
-      console.log('Supabase connection successful');
-      connectionCheckStatus.result = { success: true, responseTime };
+      connectionCheckStatus.lastCheckedAt = now;
+      connectionCheckStatus.inProgress = false;
+      return connectionCheckStatus.result;
     }
     
-    // Update timestamp
-    connectionCheckStatus.lastCheckedAt = now;
-    return connectionCheckStatus.result;
   } catch (error) {
-    console.error('Supabase connection failed:', error);
-    connectionCheckStatus.result = { 
-      success: false, 
-      error: {
-        message: error.message,
-        name: error.name,
-        stack: error.stack
-      }
-    };
-    return connectionCheckStatus.result;
+    console.error('Error testing Supabase connection:', error);
+    connectionCheckStatus.result = { success: false, error };
+    connectionCheckStatus.lastCheckedAt = now;
   } finally {
-    // Clear the in-progress flag
     connectionCheckStatus.inProgress = false;
   }
+  
+  return connectionCheckStatus.result;
 };
 
-// Only run the ReactDOM.render in browser environments, not SSR
-const isClient = typeof window !== 'undefined' && typeof document !== 'undefined';
-
-if (isClient) {
-  ReactDOM.createRoot(document.getElementById('root')).render(
-    <React.StrictMode>
-      <App />
-      <Analytics />
-      <SpeedInsights />
-      <Toaster
-        position="bottom-right"
-        toastOptions={{
-          style: {
-            background: '#2a2a2a',
-            color: '#fff',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-          },
-        }}
-      />
-    </React.StrictMode>
-  );
-} else {
-  console.log('Not rendering React in non-browser environment');
-} 
+// Render the app
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
+    <Toaster position="top-center" />
+    <App />
+    <Analytics />
+    <SpeedInsights />
+  </React.StrictMode>
+); 

@@ -52,33 +52,11 @@ const StatusPage = () => {
     try {
       const startTime = performance.now();
       
-      // Create a timeout promise
-      const timeoutPromise = new Promise((_, reject) => 
-        setTimeout(() => reject(new Error('Connection timeout')), 5000)
-      );
+      // Use the improved connection check function from main.jsx
+      const connectionResult = await checkSupabaseConnection();
       
-      // Test query to see if Supabase is responding
-      // We'll use our dummy query approach that works even if tables don't exist
-      const queryPromise = supabase
-        .from('_dummy_query_for_connection_test_')
-        .select('*')
-        .limit(1)
-        .maybeSingle();
-      
-      // Race the query against the timeout
-      const result = await Promise.race([
-        queryPromise,
-        timeoutPromise
-      ]);
-      
-      const { data, error } = result;
-      const endTime = performance.now();
-      const responseTime = endTime - startTime;
-      
-      // If we get a "relation does not exist" error, that's actually good!
-      // It means we connected to the database but the table doesn't exist
-      if (error && error.code === '42P01') {
-        console.log('Supabase connection successful (table does not exist)');
+      if (connectionResult && connectionResult.success) {
+        console.log('Supabase connection successful');
         
         // Check what tables we can access
         const tables = [];
@@ -112,6 +90,9 @@ const StatusPage = () => {
           }
         });
         
+        const endTime = performance.now();
+        const responseTime = endTime - startTime;
+        
         setSupabaseStatus({
           status: 'online',
           error: null,
@@ -119,22 +100,17 @@ const StatusPage = () => {
           tables,
           lastChecked: new Date()
         });
-      } else if (error) {
-        console.error('Supabase query error:', error);
+      } else {
+        console.error('Supabase connection failed:', connectionResult?.error);
+        
+        const endTime = performance.now();
+        const responseTime = endTime - startTime;
+        
         setSupabaseStatus({
           status: 'offline',
-          error: t('status.errors.supabaseQuery', 'Supabase query error: {error}', { error: error.message }),
+          error: connectionResult?.error?.message || t('status.errors.connectionFailed', 'Connection failed'),
           responseTime: Math.round(responseTime),
           tables: [],
-          lastChecked: new Date()
-        });
-      } else {
-        // If we somehow got a successful response from our dummy table, that's weird but okay
-        setSupabaseStatus({
-          status: 'online',
-          error: null,
-          responseTime: Math.round(responseTime),
-          tables: [{ name: '_dummy_query_for_connection_test_', rows: '?', status: 'accessible' }],
           lastChecked: new Date()
         });
       }
@@ -254,6 +230,10 @@ const StatusPage = () => {
                 <span className="text-white/60">{t('status.supabase.responseTime', 'Response Time')}:</span>
                 <span>{supabaseStatus.responseTime ? `${supabaseStatus.responseTime}ms` : t('common.na', 'N/A')}</span>
               </div>
+              <div className="flex justify-between">
+                <span className="text-white/60">{t('status.supabase.url', 'URL')}:</span>
+                <span className="text-xs truncate max-w-[200px]">{import.meta.env.VITE_SUPABASE_URL || t('common.na', 'N/A')}</span>
+              </div>
               {supabaseStatus.error && (
                 <div className="p-2 bg-red-500/10 rounded-md text-red-400 text-sm">
                   {t('status.errors.prefix', 'Error')}: {supabaseStatus.error}
@@ -348,8 +328,8 @@ const StatusPage = () => {
               <span>{import.meta.env.MODE || 'development'}</span>
             </div>
             <div className="flex justify-between">
-              <span className="text-white/60">Node Version:</span>
-              <span>{import.meta.env.VITE_NODE_VERSION || 'N/A'}</span>
+              <span className="text-white/60">Supabase URL:</span>
+              <span className="text-xs truncate max-w-[200px]">{import.meta.env.VITE_SUPABASE_URL || 'Not configured'}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-white/60">Build Time:</span>

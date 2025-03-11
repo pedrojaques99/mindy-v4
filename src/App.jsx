@@ -29,6 +29,7 @@ import StatusPage from './pages/StatusPage';
 // Context
 import { UserProvider } from './context/UserContext';
 import { LanguageProvider } from './context/LanguageContext';
+import { ResourcesProvider } from './context/ResourcesContext';
 
 // AnimatedRoutes component to handle route transitions
 const AnimatedRoutes = () => {
@@ -102,6 +103,87 @@ function App() {
   const [showAuthModal, setShowAuthModal] = useState(false);
   const [dbInitialized, setDbInitialized] = useState(false);
   const [useLocalData, setUseLocalData] = useState(false);
+  const [initialized, setInitialized] = useState(false);
+
+  // Load all resources from local data (fallback)
+  const loadAppData = () => {
+    console.log('Loading local app data...');
+    
+    // Load resources from local json files
+    import('./data/resources.json')
+      .then(data => {
+        console.log('Loaded resources from local file');
+        
+        // Store resources in localStorage for offline use
+        try {
+          localStorage.setItem('cachedResources', JSON.stringify(data.default));
+          console.log('Local resources cached to localStorage');
+        } catch (storageError) {
+          console.warn('Failed to cache resources to localStorage:', storageError);
+        }
+        
+        // Set initialization complete
+        setInitialized(true);
+      })
+      .catch(error => {
+        console.error('Error loading resources from local file:', error);
+        
+        // Create minimal empty resources for the app to function
+        const emptyResources = [];
+        try {
+          localStorage.setItem('cachedResources', JSON.stringify(emptyResources));
+        } catch (storageError) {
+          console.warn('Failed to cache empty resources:', storageError);
+        }
+        
+        // Set initialization complete even on error
+        setInitialized(true);
+      });
+  };
+  
+  // Helper function to load resources from Supabase
+  const loadResourcesFromSupabase = async () => {
+    try {
+      console.log('Loading resources from Supabase...');
+      
+      // Fetch resources from Supabase with proper headers
+      const { data: resources, error: resourcesError } = await supabase
+        .from('resources')
+        .select('*')
+        .order('created_at', { ascending: false });
+        
+      if (resourcesError) {
+        console.error('Error fetching resources:', resourcesError);
+        throw resourcesError;
+      }
+      
+      if (resources && resources.length > 0) {
+        console.log(`Loaded ${resources.length} resources from Supabase.`);
+        
+        // Use setUseLocalData to track data source
+        setUseLocalData(false);
+        
+        // Store resources in localStorage for offline use
+        try {
+          localStorage.setItem('cachedResources', JSON.stringify(resources));
+          console.log('Resources cached to localStorage');
+        } catch (storageError) {
+          console.warn('Failed to cache resources to localStorage:', storageError);
+        }
+      } else {
+        console.warn('No resources found in Supabase. Using fallback data.');
+        setUseLocalData(true);
+        loadAppData();
+      }
+      
+      // Set initialization complete
+      setInitialized(true);
+    } catch (error) {
+      console.error('Error loading resources from Supabase:', error);
+      setUseLocalData(true);
+      loadAppData();
+    }
+  };
 
   useEffect(() => {
     // Initialize database and check connection
@@ -116,8 +198,12 @@ function App() {
           console.error('Database connection failed:', connectionResult.error);
           toast.error('Database connection failed. Using local data.');
           
-          // Use local data instead of dispatch
+          // Use local data instead
           setUseLocalData(true);
+          
+          // Still load resources to show the app works
+          loadAppData();
+          return;
         } else {
           console.log('Database connection successful');
           
@@ -141,15 +227,21 @@ function App() {
                 console.warn('Database setup failed. Using fallback data.');
                 toast.error('Database setup failed. Using local data.');
                 
-                // Use local data instead of dispatch
+                // Use local data instead
                 setUseLocalData(true);
+                
+                // Still load resources to show the app works
+                loadAppData();
               }
             } catch (setupError) {
               console.error('Error setting up database:', setupError);
               toast.error('Failed to connect to database. Using local data.');
               
-              // Use local data instead of dispatch
+              // Use local data instead
               setUseLocalData(true);
+              
+              // Still load resources to show the app works
+              loadAppData();
             }
           } else {
             console.log('Database is set up. Loading data from Supabase...');
@@ -171,51 +263,12 @@ function App() {
         console.error('Error initializing app:', error);
         toast.error('Error initializing app. Using local data.');
         
-        // Use local data instead of dispatch
+        // Use local data instead
         setUseLocalData(true);
         setDbInitialized(true);
       } finally {
         // Always finish loading
         setIsLoading(false);
-      }
-    };
-    
-    // Helper function to load resources from Supabase
-    const loadResourcesFromSupabase = async () => {
-      try {
-        console.log('Loading resources from Supabase...');
-        
-        // Fetch resources from Supabase with proper headers
-        const { data: resources, error: resourcesError } = await supabase
-          .from('resources')
-          .select('*')
-          .order('created_at', { ascending: false });
-          
-        if (resourcesError) {
-          console.error('Error fetching resources:', resourcesError);
-          throw resourcesError;
-        }
-        
-        if (resources && resources.length > 0) {
-          console.log(`Loaded ${resources.length} resources from Supabase.`);
-          
-          // Use setUseLocalData instead of dispatch
-          setUseLocalData(false);
-          
-          // Store resources in localStorage for offline use
-          try {
-            localStorage.setItem('cachedResources', JSON.stringify(resources));
-            console.log('Resources cached to localStorage');
-          } catch (storageError) {
-            console.warn('Failed to cache resources to localStorage:', storageError);
-          }
-        } else {
-          console.warn('No resources found in Supabase. Using fallback data.');
-          setUseLocalData(true);
-        }
-      } catch (error) {
-        console.error('Error loading resources from Supabase:', error);
-        setUseLocalData(true);
       }
     };
     
@@ -229,26 +282,28 @@ function App() {
   return (
     <UserProvider>
       <LanguageProvider>
-        <HelmetProvider>
-          <BrowserRouter>
-            <div className="app-container min-h-screen flex flex-col grid-bg minimal-scrollbar">
-              <Navbar onOpenAuth={() => setShowAuthModal(true)} />
-              
-              <main id="main-content" className="flex-grow">
-                <AnimatedRoutes />
-              </main>
-              
-              <Footer />
-              
-              <AuthModal 
-                isOpen={showAuthModal} 
-                onClose={() => setShowAuthModal(false)} 
-              />
-              
-              <ScrollToTop />
-            </div>
-          </BrowserRouter>
-        </HelmetProvider>
+        <ResourcesProvider>
+          <HelmetProvider>
+            <BrowserRouter>
+              <div className="app-container min-h-screen flex flex-col grid-bg minimal-scrollbar">
+                <Navbar onOpenAuth={() => setShowAuthModal(true)} />
+                
+                <main id="main-content" className="flex-grow">
+                  <AnimatedRoutes />
+                </main>
+                
+                <Footer />
+                
+                <AuthModal 
+                  isOpen={showAuthModal} 
+                  onClose={() => setShowAuthModal(false)} 
+                />
+                
+                <ScrollToTop />
+              </div>
+            </BrowserRouter>
+          </HelmetProvider>
+        </ResourcesProvider>
       </LanguageProvider>
     </UserProvider>
   );
