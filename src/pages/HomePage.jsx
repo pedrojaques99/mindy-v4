@@ -1,9 +1,11 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { supabase } from '../main';
+import { supabase, checkSupabaseConnection } from '../main';
 import { useUser } from '../context/UserContext';
 import { useLanguage } from '../context/LanguageContext';
+import { loadTranslations } from '../utils/translations';
+import { updateUserProfile } from '../utils/user';
 import SearchBar from '../components/SearchBar';
 import GlassCard from '../components/ui/GlassCard';
 import ResourceSkeleton from '../components/ui/ResourceSkeleton';
@@ -31,40 +33,29 @@ import {
 } from '@heroicons/react/outline';
 import ResourceCard from '../components/ResourceCard';
 import SoftwareIcon from '../components/ui/SoftwareIcon';
+import toast from 'react-hot-toast';
 
-// Utility function to check if a resource has a specific tag
+// Move these outside the component to avoid recreating on each render
 const resourceHasTag = (resource, tagToCheck) => {
-  if (!resource || !resource.tags || !tagToCheck) return false;
-  
-  // Convert tagToCheck to lowercase for case-insensitive comparison
+  if (!resource?.tags || !tagToCheck) return false;
   const normalizedTag = tagToCheck.toLowerCase();
-  
-  // If tags is an array
-  if (Array.isArray(resource.tags)) {
-    return resource.tags.some(tag => 
-      tag && typeof tag === 'string' && tag.toLowerCase() === normalizedTag
-    );
-  }
-  
-  // If tags is a string (comma-separated or single tag)
-  if (typeof resource.tags === 'string') {
-    const tagsArray = resource.tags.split(',').map(t => t.trim().toLowerCase());
-    return tagsArray.includes(normalizedTag);
-  }
-  
-  return false;
+  return Array.isArray(resource.tags) 
+    ? resource.tags.some(tag => tag?.toLowerCase() === normalizedTag)
+    : resource.tags.split(',').map(t => t.trim().toLowerCase()).includes(normalizedTag);
 };
 
 const HomePage = () => {
   const { user } = useUser();
-  const { t } = useLanguage();
+  const { t, currentLanguage, setCurrentLanguage, languages } = useLanguage();
   const navigate = useNavigate();
-  
-  // Check if we're in the browser environment
   const isBrowser = typeof window !== 'undefined';
   
-  // Popular tags for suggestions - moved inside component to access t function
-  const POPULAR_TAGS = [
+  // Add missing state for translations
+  const [translations, setTranslations] = useState({});
+  const [connectionError, setConnectionError] = useState(false);
+  
+  // Move POPULAR_TAGS outside useEffect to avoid recreation
+  const POPULAR_TAGS = useMemo(() => [
     t('tags.free', 'free'), 
     t('tags.design', 'design'), 
     t('tags.typography', 'typography'), 
@@ -75,7 +66,7 @@ const HomePage = () => {
     t('tags.templates', 'templates'), 
     t('tags.resources', 'resources'), 
     t('tags.tools', 'tools')
-  ];
+  ], [t]);
 
   // Move INITIAL_SOFTWARE_CATEGORIES inside component to use t function
   const INITIAL_SOFTWARE_CATEGORIES = [
@@ -179,137 +170,230 @@ const HomePage = () => {
   // Get flattened subcategories
   const subcategories = Object.values(categories).flatMap(category => category.subcategories);
   
+  // Check database connection on mount
   useEffect(() => {
-    const fetchResources = async () => {
-      // Only fetch if we're in the browser
-      if (!isBrowser) return;
+    const checkConnection = async () => {
+      const isConnected = await checkSupabaseConnection();
+      if (!isConnected) {
+        setConnectionError(true);
+        toast.error('Database connection failed. Using fallback data.');
+      }
+    };
+    
+    checkConnection();
+  }, []);
+
+  // Fetch counts for all categories and subcategories
+  const fetchCategoryCounts = useCallback(async () => {
+    try {
+      // Get all resources first (we need to count locally because of array filters)
+      const { data: allResources, error } = await supabase
+        .from('resources')
+        .select('*');
       
-      try {
-        setLoading(true);
-        
-        // Fetch trending resources
-        const { data: trendingData, error: trendingError } = await supabase
-          .from('resources')
-          .select('*')
-          .order('popularity', { ascending: false })
-          .limit(6);
-          
-        if (trendingError) throw trendingError;
-        setTrendingResources(trendingData || []);
-        
-        // Fetch recent resources
-        const { data: recentData, error: recentError } = await supabase
-          .from('resources')
-          .select('*')
-          .order('created_at', { ascending: false })
-          .limit(6);
-          
-        if (recentError) throw recentError;
-        setRecentResources(recentData || []);
-        
-        // Fetch popular resources
-        const { data: popularData, error: popularError } = await supabase
-          .from('resources')
-          .select('*')
-          .order('popularity', { ascending: false })
-          .limit(6);
-          
-        if (popularError) throw popularError;
-        setPopularResources(popularData || []);
-        
-        // Fetch count for each category
-        await fetchCategoryCounts();
-        
-        // Fetch count for each software tag
-        await fetchSoftwareCounts();
-        
-      } catch (error) {
-        console.error('Error fetching resources:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    // Fetch counts for all categories and subcategories
-    const fetchCategoryCounts = async () => {
-      try {
-        // Get all resources first (we need to count locally because of array filters)
-        const { data: allResources, error } = await supabase
-          .from('resources')
-          .select('*');
-        
-        if (error) throw error;
-        
-        if (!allResources) return;
-        
-        // Create a deep copy of the categories structure without React elements
-        const updatedCategories = {};
-        Object.entries(INITIAL_CATEGORIES).forEach(([key, category]) => {
-          updatedCategories[key] = {
-            ...category,
-            // Don't include the icon in the copy since it's a React element
-            icon: category.icon,
-            subcategories: [...category.subcategories]
-          };
-        });
-        
-        // Count resources for each category and subcategory
-        Object.keys(updatedCategories).forEach(categoryKey => {
-          // Find resources for this category
-          const resourcesInCategory = allResources.filter(r => {
-            if (!r.category) return false;
-            const normalizedCategory = r.category.toLowerCase();
-            return normalizedCategory === categoryKey.toLowerCase();
-          });
-          
-          updatedCategories[categoryKey].count = resourcesInCategory.length;
-          
-          // Count for each subcategory
-          updatedCategories[categoryKey].subcategories.forEach(subcategory => {
-            // Case-insensitive matching for subcategory
-            const resourcesInSubcategory = allResources.filter(r => 
-              r.subcategory && r.subcategory.toLowerCase() === subcategory.id.toLowerCase()
-            );
-            subcategory.count = resourcesInSubcategory.length;
-          });
-        });
-        
-        setCategories(updatedCategories);
-      } catch (error) {
+      if (error) {
         console.error('Error fetching category counts:', error);
+        
+        // If the table doesn't exist, just use the initial categories
+        if (error.code === '42P01') {
+          console.warn('Resources table does not exist, using initial categories');
+          return;
+        }
+        
+        throw error;
       }
-    };
-    
-    // Fetch counts for software categories
-    const fetchSoftwareCounts = async () => {
-      try {
-        // Get all resources first
-        const { data: allResources, error } = await supabase
-          .from('resources')
-          .select('*');
-        
-        if (error) throw error;
-        
-        if (!allResources) return;
-        
-        // Create a deep copy of software categories
-        const updatedSoftware = JSON.parse(JSON.stringify(INITIAL_SOFTWARE_CATEGORIES));
-        
-        // Count resources for each software
-        updatedSoftware.forEach(software => {
-          // Use the utility function to check for tag matches
-          const resourcesWithSoftware = allResources.filter(r => resourceHasTag(r, software.id));
-          software.count = resourcesWithSoftware.length;
+      
+      if (!allResources) return;
+      
+      // Create a deep copy of the categories structure without React elements
+      const updatedCategories = {};
+      Object.entries(INITIAL_CATEGORIES).forEach(([key, category]) => {
+        updatedCategories[key] = {
+          ...category,
+          // Don't include the icon in the copy since it's a React element
+          icon: category.icon,
+          subcategories: [...category.subcategories]
+        };
+      });
+      
+      // Count resources for each category and subcategory
+      Object.keys(updatedCategories).forEach(categoryKey => {
+        // Find resources for this category
+        const resourcesInCategory = allResources.filter(r => {
+          if (!r.category) return false;
+          const normalizedCategory = r.category.toLowerCase();
+          return normalizedCategory === categoryKey.toLowerCase();
         });
         
-        setSoftwareCategories(updatedSoftware);
-      } catch (error) {
+        updatedCategories[categoryKey].count = resourcesInCategory.length;
+        
+        // Count for each subcategory
+        updatedCategories[categoryKey].subcategories.forEach((subcategory, index) => {
+          // Case-insensitive matching for subcategory
+          const resourcesInSubcategory = allResources.filter(r => 
+            r.subcategory && r.subcategory.toLowerCase() === subcategory.id.toLowerCase()
+          );
+          updatedCategories[categoryKey].subcategories[index].count = resourcesInSubcategory.length;
+        });
+      });
+      
+      setCategories(updatedCategories);
+    } catch (error) {
+      console.error('Error fetching category counts:', error);
+      // Use fallback data if there's an error
+      setConnectionError(true);
+    }
+  }, [INITIAL_CATEGORIES]);
+  
+  // Fetch counts for software categories
+  const fetchSoftwareCounts = useCallback(async () => {
+    try {
+      // Get all resources first
+      const { data: allResources, error } = await supabase
+        .from('resources')
+        .select('*');
+      
+      if (error) {
         console.error('Error fetching software counts:', error);
+        
+        // If the table doesn't exist, just use the initial software categories
+        if (error.code === '42P01') {
+          console.warn('Resources table does not exist, using initial software categories');
+          setSoftwareCategories(INITIAL_SOFTWARE_CATEGORIES);
+          return;
+        }
+        
+        throw error;
       }
-    };
+      
+      if (!allResources) {
+        setSoftwareCategories(INITIAL_SOFTWARE_CATEGORIES);
+        return;
+      }
+      
+      // Create a deep copy of software categories
+      const updatedSoftware = JSON.parse(JSON.stringify(INITIAL_SOFTWARE_CATEGORIES));
+      
+      // Count resources for each software
+      updatedSoftware.forEach((software, index) => {
+        // Use the utility function to check for tag matches
+        const resourcesWithSoftware = allResources.filter(r => resourceHasTag(r, software.id));
+        updatedSoftware[index].count = resourcesWithSoftware.length;
+      });
+      
+      setSoftwareCategories(updatedSoftware);
+    } catch (error) {
+      console.error('Error fetching software counts:', error);
+      // Use fallback data if there's an error
+      setConnectionError(true);
+      setSoftwareCategories(INITIAL_SOFTWARE_CATEGORIES);
+    }
+  }, [INITIAL_SOFTWARE_CATEGORIES]);
+
+  // Move fetchResources outside useEffect and memoize it
+  const fetchResources = useCallback(async () => {
+    if (!isBrowser) return;
     
+    try {
+      setLoading(true);
+      
+      // First check if we can connect to the database
+      const isConnected = await checkSupabaseConnection();
+      
+      if (!isConnected) {
+        console.error('Database connection failed. Using fallback data.');
+        setConnectionError(true);
+        setLoading(false);
+        return;
+      }
+      
+      // Try to fetch resources
+      try {
+        const [trendingData, recentData, popularData] = await Promise.all([
+          supabase.from('resources')
+            .select('*')
+            .order('popularity', { ascending: false })
+            .limit(6),
+            
+          supabase.from('resources')
+            .select('*')
+            .order('created_at', { ascending: false })
+            .limit(6),
+            
+          supabase.from('resources')
+            .select('*')
+            .order('popularity', { ascending: false })
+            .limit(6)
+        ]);
+
+        // Check for errors in each query
+        if (trendingData.error) {
+          console.error('Error fetching trending resources:', trendingData.error);
+          if (trendingData.error.code === '42P01') {
+            // Table doesn't exist, use empty array
+            setTrendingResources([]);
+          } else {
+            throw trendingData.error;
+          }
+        } else {
+          setTrendingResources(trendingData.data || []);
+        }
+
+        if (recentData.error) {
+          console.error('Error fetching recent resources:', recentData.error);
+          if (recentData.error.code === '42P01') {
+            // Table doesn't exist, use empty array
+            setRecentResources([]);
+          } else {
+            throw recentData.error;
+          }
+        } else {
+          setRecentResources(recentData.data || []);
+        }
+
+        if (popularData.error) {
+          console.error('Error fetching popular resources:', popularData.error);
+          if (popularData.error.code === '42P01') {
+            // Table doesn't exist, use empty array
+            setPopularResources([]);
+          } else {
+            throw popularData.error;
+          }
+        } else {
+          setPopularResources(popularData.data || []);
+        }
+        
+        // Try to fetch category and software counts
+        try {
+          await Promise.all([
+            fetchCategoryCounts(),
+            fetchSoftwareCounts()
+          ]);
+        } catch (countsError) {
+          console.error('Error fetching counts:', countsError);
+          // Continue with what we have
+        }
+      } catch (resourcesError) {
+        console.error('Error fetching resources:', resourcesError);
+        setConnectionError(true);
+        
+        // Use empty arrays for resources
+        setTrendingResources([]);
+        setRecentResources([]);
+        setPopularResources([]);
+      }
+    } catch (error) {
+      console.error('Error in fetchResources:', error);
+      setConnectionError(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [isBrowser, fetchCategoryCounts, fetchSoftwareCounts]);
+
+  // Update useEffect dependencies
+  useEffect(() => {
     fetchResources();
-  }, [isBrowser]); // Add isBrowser to dependencies
+  }, [fetchResources, currentLanguage]); // Add currentLanguage dependency
   
   // Apply filters whenever they change
   useEffect(() => {
@@ -475,29 +559,34 @@ const HomePage = () => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
   };
 
-  // Change language function
+  // Update changeLanguage function with proper error handling
   const changeLanguage = async (langCode) => {
-    if (!languages[langCode] || currentLanguage.code === langCode) return;
+    if (!languages?.[langCode] || currentLanguage?.code === langCode) return;
     
     try {
       setLoading(true);
       const newLang = languages[langCode];
       const langTranslations = await loadTranslations(langCode);
       
+      if (!langTranslations) {
+        throw new Error(`Failed to load translations for ${langCode}`);
+      }
+      
       setCurrentLanguage(newLang);
       setTranslations(langTranslations);
       
-      // Update user preference in Supabase if logged in
       if (user) {
         await updateUserProfile({ language: langCode });
       }
       
-      // Always store in localStorage for persistence if in browser
       if (isBrowser) {
         localStorage.setItem('preferredLanguage', langCode);
       }
+      
+      toast.success(`Language changed to ${newLang.name}`);
     } catch (error) {
       console.error('Error changing language:', error);
+      toast.error(`Failed to change language: ${error.message}`);
     } finally {
       setLoading(false);
     }

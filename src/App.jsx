@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
-import { supabase } from './main';
+import { supabase, checkSupabaseConnection } from './main';
 import { HelmetProvider } from 'react-helmet-async';
+import toast from 'react-hot-toast';
+import { setupDatabase, checkDatabaseSetup } from './utils/setupDatabase';
 
 // Components
 import Navbar from './components/Navbar';
@@ -98,14 +100,64 @@ const AnimatedRoutes = () => {
 function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [showAuthModal, setShowAuthModal] = useState(false);
+  const [dbInitialized, setDbInitialized] = useState(false);
 
   useEffect(() => {
-    // Simulate loading resources
-    const timer = setTimeout(() => {
-      setIsLoading(false);
-    }, 1500);
-
-    return () => clearTimeout(timer);
+    // Initialize database and check connection
+    const initializeApp = async () => {
+      try {
+        // Check if database is connected
+        const isConnected = await checkSupabaseConnection();
+        
+        if (!isConnected) {
+          console.warn('Database connection failed. Using fallback data.');
+          // Don't show error toast on initial load to avoid overwhelming the user
+          // toast.error('Database connection failed. Using fallback data.');
+        } else {
+          console.log('Database connection successful');
+          
+          // Check if database is set up
+          const isSetUp = await checkDatabaseSetup();
+          
+          if (!isSetUp) {
+            console.log('Database not set up. Attempting to set up...');
+            // Set up database
+            try {
+              const setupSuccess = await setupDatabase();
+              
+              if (setupSuccess) {
+                console.log('Database setup successful');
+                // Don't show success toast on initial load
+                // toast.success('Database setup successful');
+              } else {
+                console.warn('Database setup failed. Using fallback data.');
+                // Don't show error toast on initial load
+                // toast.error('Database setup failed. Using fallback data.');
+              }
+            } catch (setupError) {
+              console.error('Error setting up database:', setupError);
+              // Continue with fallback data
+            }
+          } else {
+            console.log('Database already set up');
+          }
+          
+          setDbInitialized(true);
+        }
+        
+        // Simulate loading resources
+        setTimeout(() => {
+          setIsLoading(false);
+        }, 1000); // Reduced loading time for better UX
+      } catch (error) {
+        console.error('Error initializing app:', error);
+        // Don't show error toast on initial load
+        // toast.error('Error initializing app. Using fallback data.');
+        setIsLoading(false);
+      }
+    };
+    
+    initializeApp();
   }, []);
 
   if (isLoading) {

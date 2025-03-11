@@ -757,4 +757,90 @@ VALUES
   ('pt-BR', 'errors.unauthorized', 'Você não está autorizado a visualizar esta página'),
   ('pt-BR', 'errors.somethingWentWrong', 'Algo deu errado')
 ON CONFLICT (language, key) DO UPDATE
+SET value = EXCLUDED.value;
+
+-- Add missing translations for resource pages
+INSERT INTO translations (language, key, value)
+VALUES
+  -- English translations
+  ('en', 'resource.pageTitle', '{title} - {appName}'),
+  ('en', 'resource.visitWebsite', 'Visit Website'),
+  ('en', 'resource.loading', 'Loading resource...'),
+  ('en', 'resource.error', 'Error loading resource'),
+  ('en', 'resource.notFound', 'Resource not found'),
+  ('en', 'resource.commentsTitle', 'Comments ({count})'),
+  ('en', 'resource.detailsTitle', 'Resource Details'),
+  ('en', 'resource.metaDescription', '{title} - View details and related resources'),
+
+  -- Portuguese translations
+  ('pt-BR', 'resource.pageTitle', '{title} - {appName}'),
+  ('pt-BR', 'resource.visitWebsite', 'Visitar Website'),
+  ('pt-BR', 'resource.loading', 'Carregando recurso...'),
+  ('pt-BR', 'resource.error', 'Erro ao carregar recurso'),
+  ('pt-BR', 'resource.notFound', 'Recurso não encontrado'),
+  ('pt-BR', 'resource.commentsTitle', 'Comentários ({count})'),
+  ('pt-BR', 'resource.detailsTitle', 'Detalhes do Recurso'),
+  ('pt-BR', 'resource.metaDescription', '{title} - Ver detalhes e recursos relacionados')
+ON CONFLICT (language, key) DO UPDATE
+SET value = EXCLUDED.value;
+
+-- Add missing UI translations
+INSERT INTO translations (language, key, value)
+VALUES
+  -- English translations
+  ('en', 'ui.loading', 'Loading...'),
+  ('en', 'ui.error', 'Error'),
+  ('en', 'ui.retry', 'Retry'),
+  ('en', 'ui.close', 'Close'),
+  ('en', 'ui.save', 'Save'),
+  ('en', 'ui.cancel', 'Cancel'),
+  ('en', 'ui.confirm', 'Confirm'),
+  ('en', 'ui.back', 'Back'),
+  ('en', 'ui.next', 'Next'),
+  ('en', 'ui.previous', 'Previous'),
+  ('en', 'ui.share', 'Share'),
+  ('en', 'ui.copy', 'Copy'),
+  ('en', 'ui.copied', 'Copied!'),
+  ('en', 'ui.view', 'View'),
+  ('en', 'ui.edit', 'Edit'),
+  ('en', 'ui.delete', 'Delete'),
+  ('en', 'ui.search', 'Search'),
+  ('en', 'ui.filter', 'Filter'),
+  ('en', 'ui.sort', 'Sort'),
+  ('en', 'ui.more', 'More'),
+  ('en', 'ui.less', 'Less'),
+  ('en', 'ui.all', 'All'),
+  ('en', 'ui.none', 'None'),
+  ('en', 'ui.other', 'Other'),
+  ('en', 'ui.required', 'Required'),
+  ('en', 'ui.optional', 'Optional'),
+
+  -- Portuguese translations
+  ('pt-BR', 'ui.loading', 'Carregando...'),
+  ('pt-BR', 'ui.error', 'Erro'),
+  ('pt-BR', 'ui.retry', 'Tentar novamente'),
+  ('pt-BR', 'ui.close', 'Fechar'),
+  ('pt-BR', 'ui.save', 'Salvar'),
+  ('pt-BR', 'ui.cancel', 'Cancelar'),
+  ('pt-BR', 'ui.confirm', 'Confirmar'),
+  ('pt-BR', 'ui.back', 'Voltar'),
+  ('pt-BR', 'ui.next', 'Próximo'),
+  ('pt-BR', 'ui.previous', 'Anterior'),
+  ('pt-BR', 'ui.share', 'Compartilhar'),
+  ('pt-BR', 'ui.copy', 'Copiar'),
+  ('pt-BR', 'ui.copied', 'Copiado!'),
+  ('pt-BR', 'ui.view', 'Visualizar'),
+  ('pt-BR', 'ui.edit', 'Editar'),
+  ('pt-BR', 'ui.delete', 'Excluir'),
+  ('pt-BR', 'ui.search', 'Pesquisar'),
+  ('pt-BR', 'ui.filter', 'Filtrar'),
+  ('pt-BR', 'ui.sort', 'Ordenar'),
+  ('pt-BR', 'ui.more', 'Mais'),
+  ('pt-BR', 'ui.less', 'Menos'),
+  ('pt-BR', 'ui.all', 'Todos'),
+  ('pt-BR', 'ui.none', 'Nenhum'),
+  ('pt-BR', 'ui.other', 'Outro'),
+  ('pt-BR', 'ui.required', 'Obrigatório'),
+  ('pt-BR', 'ui.optional', 'Opcional')
+ON CONFLICT (language, key) DO UPDATE
 SET value = EXCLUDED.value; 

@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import { supabase } from '../main';
 import { useUser } from './UserContext';
+import toast from 'react-hot-toast';
 
 // Define available languages
 export const languages = {
@@ -18,6 +19,56 @@ export const languages = {
   }
 };
 
+// Fallback translations in case database fails
+const FALLBACK_TRANSLATIONS = {
+  en: {
+    home: {
+      hero: {
+        title: 'Discover',
+        titleHighlight: 'Creative Resources',
+        titleEnd: 'for Your Projects',
+        subtitle: 'Find the best tools, assets, and inspiration for designers, developers, and creators.'
+      },
+      search: {
+        placeholder: 'Search for resources, tools, or inspiration...',
+        submit: 'Submit search'
+      }
+    },
+    categories: {
+      assets: 'Assets',
+      tools: 'Tools',
+      community: 'Community',
+      reference: 'Reference',
+      inspiration: 'Inspiration',
+      learn: 'Learn',
+      software: 'Software'
+    }
+  },
+  pt: {
+    home: {
+      hero: {
+        title: 'Descubra',
+        titleHighlight: 'Recursos Criativos',
+        titleEnd: 'para seus Projetos',
+        subtitle: 'Encontre as melhores ferramentas, recursos e inspiração para designers, desenvolvedores e criadores.'
+      },
+      search: {
+        placeholder: 'Busque por recursos, ferramentas ou inspiração...',
+        submit: 'Buscar'
+      }
+    },
+    categories: {
+      assets: 'Recursos',
+      tools: 'Ferramentas',
+      community: 'Comunidade',
+      reference: 'Referência',
+      inspiration: 'Inspiração',
+      learn: 'Aprender',
+      software: 'Software'
+    }
+  }
+};
+
 // Create the context
 const LanguageContext = createContext();
 
@@ -32,7 +83,7 @@ export const useLanguage = () => {
 export const LanguageProvider = ({ children }) => {
   const { user, profile, updateUserProfile } = useUser();
   const [currentLanguage, setCurrentLanguage] = useState(languages.en);
-  const [translations, setTranslations] = useState({});
+  const [translations, setTranslations] = useState(FALLBACK_TRANSLATIONS.en);
   const [loading, setLoading] = useState(true);
 
   // Helper function to get nested object value by path
@@ -53,12 +104,19 @@ export const LanguageProvider = ({ children }) => {
       
       if (error) {
         console.error('Error fetching translations:', error);
-        return {};
+        
+        // If the error is that the table doesn't exist, return fallback translations
+        if (error.code === '42P01') {
+          console.warn('Translations table does not exist, using fallback translations');
+          return FALLBACK_TRANSLATIONS[langCode] || FALLBACK_TRANSLATIONS.en;
+        }
+        
+        return FALLBACK_TRANSLATIONS[langCode] || FALLBACK_TRANSLATIONS.en;
       }
       
-      if (!Array.isArray(data)) {
-        console.error('Invalid translation data format');
-        return {};
+      if (!Array.isArray(data) || data.length === 0) {
+        console.warn(`No translations found for ${langCode}, using fallback`);
+        return FALLBACK_TRANSLATIONS[langCode] || FALLBACK_TRANSLATIONS.en;
       }
 
       // Transform data into a nested object structure
@@ -100,7 +158,7 @@ export const LanguageProvider = ({ children }) => {
       return translationData;
     } catch (error) {
       console.error('Error loading translations:', error);
-      return {};
+      return FALLBACK_TRANSLATIONS[langCode] || FALLBACK_TRANSLATIONS.en;
     }
   };
 
@@ -136,9 +194,9 @@ export const LanguageProvider = ({ children }) => {
       } catch (error) {
         console.error('Error initializing language:', error);
         // Default to English on error
-        const langTranslations = await loadTranslations('en');
+        toast.error('Failed to load translations. Using English fallback.');
         setCurrentLanguage(languages.en);
-        setTranslations(langTranslations);
+        setTranslations(FALLBACK_TRANSLATIONS.en);
       } finally {
         setLoading(false);
       }
@@ -168,8 +226,14 @@ export const LanguageProvider = ({ children }) => {
       if (typeof window !== 'undefined') {
         localStorage.setItem('preferredLanguage', langCode);
       }
+      
+      toast.success(`Language changed to ${newLang.name}`);
     } catch (error) {
       console.error('Error changing language:', error);
+      toast.error(`Failed to change language: ${error.message}`);
+      
+      // Use fallback translations
+      setTranslations(FALLBACK_TRANSLATIONS[langCode] || FALLBACK_TRANSLATIONS.en);
     } finally {
       setLoading(false);
     }
@@ -207,7 +271,8 @@ export const LanguageProvider = ({ children }) => {
     languages,
     changeLanguage,
     t,
-    loading
+    loading,
+    setTranslations
   };
 
   return (

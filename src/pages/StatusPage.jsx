@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { supabase } from '../main';
+import { supabase, checkSupabaseConnection } from '../main';
 import { ArrowLeftIcon, RefreshIcon, ServerIcon, DatabaseIcon, CheckCircleIcon, XCircleIcon, ExclamationIcon } from '@heroicons/react/outline';
 import { useLanguage } from "../context/LanguageContext";
 
@@ -58,10 +58,12 @@ const StatusPage = () => {
       );
       
       // Test query to see if Supabase is responding
+      // We'll use our dummy query approach that works even if tables don't exist
       const queryPromise = supabase
-        .from('profiles')
-        .select('count', { count: 'exact', head: true })
-        .limit(1);
+        .from('_dummy_query_for_connection_test_')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
       
       // Race the query against the timeout
       const result = await Promise.race([
@@ -73,7 +75,50 @@ const StatusPage = () => {
       const endTime = performance.now();
       const responseTime = endTime - startTime;
       
-      if (error) {
+      // If we get a "relation does not exist" error, that's actually good!
+      // It means we connected to the database but the table doesn't exist
+      if (error && error.code === '42P01') {
+        console.log('Supabase connection successful (table does not exist)');
+        
+        // Check what tables we can access
+        const tables = [];
+        
+        // Try to access known tables
+        const tableChecks = await Promise.allSettled([
+          supabase.from('profiles').select('count', { count: 'exact', head: true }),
+          supabase.from('resources').select('count', { count: 'exact', head: true }),
+          supabase.from('translations').select('count', { count: 'exact', head: true }),
+          supabase.from('health_check').select('count', { count: 'exact', head: true })
+        ]);
+        
+        // Process results
+        const tableNames = ['profiles', 'resources', 'translations', 'health_check'];
+        tableChecks.forEach((result, index) => {
+          const tableName = tableNames[index];
+          if (result.status === 'fulfilled') {
+            const { data, error } = result.value;
+            if (error) {
+              if (error.code === '42P01') {
+                tables.push({ name: tableName, rows: '0', status: 'not created' });
+              } else {
+                tables.push({ name: tableName, rows: '?', status: 'error', error: error.message });
+              }
+            } else {
+              tables.push({ name: tableName, rows: data.count || '?', status: 'accessible' });
+            }
+          } else {
+            tables.push({ name: tableName, rows: '?', status: 'error', error: result.reason.message });
+          }
+        });
+        
+        setSupabaseStatus({
+          status: 'online',
+          error: null,
+          responseTime: Math.round(responseTime),
+          tables,
+          lastChecked: new Date()
+        });
+      } else if (error) {
         console.error('Supabase query error:', error);
         setSupabaseStatus({
           status: 'offline',
@@ -83,33 +128,14 @@ const StatusPage = () => {
           lastChecked: new Date()
         });
       } else {
-        // If first query succeeded, get table information
-        try {
-          // This query would normally be done server-side 
-          // For demo purposes, we're just showing what tables we know exist
-          const tables = [
-            { name: 'profiles', rows: '?', status: 'accessible' },
-            { name: 'favorites', rows: '?', status: 'accessible' },
-            { name: 'resources', rows: '?', status: 'accessible' }
-          ];
-          
-          setSupabaseStatus({
-            status: 'online',
-            error: null,
-            responseTime: Math.round(responseTime),
-            tables,
-            lastChecked: new Date()
-          });
-        } catch (e) {
-          console.error('Error fetching table info:', e);
-          setSupabaseStatus({
-            status: 'degraded',
-            error: t('status.errors.tableInfo', 'Connected but could not fetch table info'),
-            responseTime: Math.round(responseTime),
-            tables: [],
-            lastChecked: new Date()
-          });
-        }
+        // If we somehow got a successful response from our dummy table, that's weird but okay
+        setSupabaseStatus({
+          status: 'online',
+          error: null,
+          responseTime: Math.round(responseTime),
+          tables: [{ name: '_dummy_query_for_connection_test_', rows: '?', status: 'accessible' }],
+          lastChecked: new Date()
+        });
       }
     } catch (error) {
       console.error('Error checking Supabase status:', error);
@@ -241,39 +267,73 @@ const StatusPage = () => {
         </div>
         
         {/* Database Tables */}
-        {supabaseStatus.status === 'online' && (
+        {supabaseStatus.tables && supabaseStatus.tables.length > 0 && (
           <div className="glass-card p-6 mb-8">
             <h2 className="text-xl font-medium mb-4">{t('status.tables.title', 'Database Tables')}</h2>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="border-b border-dark-300">
-                    <th className="text-left pb-2 text-white/70">{t('status.tables.name', 'Table Name')}</th>
-                    <th className="text-left pb-2 text-white/70">{t('status.tables.rows', 'Rows')}</th>
-                    <th className="text-left pb-2 text-white/70">{t('status.tables.status', 'Status')}</th>
+                    <th className="text-left py-2 px-4 text-white/70">{t('status.tables.name', 'Table Name')}</th>
+                    <th className="text-left py-2 px-4 text-white/70">{t('status.tables.status', 'Status')}</th>
+                    <th className="text-left py-2 px-4 text-white/70">{t('status.tables.rows', 'Rows')}</th>
+                    <th className="text-left py-2 px-4 text-white/70">{t('status.tables.details', 'Details')}</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {supabaseStatus.tables.map((table) => (
-                    <tr key={table.name} className="border-b border-dark-300/50">
-                      <td className="py-2">{table.name}</td>
-                      <td className="py-2">{table.rows}</td>
-                      <td className="py-2">
-                        <span className={`inline-flex items-center ${
-                          table.status === 'accessible' ? 'text-green-400' : 'text-red-400'
-                        }`}>
-                          {table.status === 'accessible' ? (
+                  {supabaseStatus.tables.map((table, index) => (
+                    <tr key={index} className="border-b border-dark-300/50">
+                      <td className="py-2 px-4 font-mono text-sm">{table.name}</td>
+                      <td className="py-2 px-4">
+                        {table.status === 'accessible' && (
+                          <span className="flex items-center text-green-400">
                             <CheckCircleIcon className="w-4 h-4 mr-1" />
-                          ) : (
+                            {t('status.tables.accessible', 'Accessible')}
+                          </span>
+                        )}
+                        {table.status === 'not created' && (
+                          <span className="flex items-center text-yellow-400">
+                            <ExclamationIcon className="w-4 h-4 mr-1" />
+                            {t('status.tables.notCreated', 'Not Created')}
+                          </span>
+                        )}
+                        {table.status === 'error' && (
+                          <span className="flex items-center text-red-400">
                             <XCircleIcon className="w-4 h-4 mr-1" />
-                          )}
-                          {t(`status.tables.status.${table.status}`, table.status)}
-                        </span>
+                            {t('status.tables.error', 'Error')}
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-2 px-4">{table.rows}</td>
+                      <td className="py-2 px-4 text-sm text-white/60">
+                        {table.error && (
+                          <span className="text-red-400">{table.error}</span>
+                        )}
+                        {table.status === 'not created' && (
+                          <span>{t('status.tables.needsSetup', 'Table needs to be created')}</span>
+                        )}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            </div>
+            
+            <div className="mt-4 p-3 bg-dark-300/50 rounded-md text-sm">
+              <p className="text-white/70 mb-2">{t('status.tables.setupInstructions', 'Database Setup Instructions:')}</p>
+              <ol className="list-decimal list-inside space-y-1 text-white/60">
+                <li>{t('status.tables.setupStep1', 'Go to the Test Page to set up the database')}</li>
+                <li>{t('status.tables.setupStep2', 'Click on "Setup Database" button')}</li>
+                <li>{t('status.tables.setupStep3', 'Refresh this page to see the updated status')}</li>
+              </ol>
+              <div className="mt-3">
+                <Link 
+                  to="/test-supabase" 
+                  className="inline-flex items-center px-3 py-1 bg-lime-accent/20 text-lime-accent rounded-md hover:bg-lime-accent/30 transition-colors"
+                >
+                  {t('status.tables.goToTestPage', 'Go to Test Page')}
+                </Link>
+              </div>
             </div>
           </div>
         )}

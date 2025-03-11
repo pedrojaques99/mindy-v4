@@ -76,9 +76,11 @@ export default function ResourceCard({ resource, delay = 0 }) {
         ]);
         
       // Update popularity
-      await supabase
-        .rpc('increment_popularity', { resource_id: resource.id })
-        .catch(error => console.error('Error incrementing popularity:', error));
+      try {
+        await supabase.rpc('increment_popularity', { resource_id: resource.id });
+      } catch (error) {
+        console.error('Error incrementing popularity:', error);
+      }
     } catch (error) {
       console.error('Error tracking view:', error);
     }
