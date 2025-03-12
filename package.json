@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "preview-db": "node preview-database.js",
+    "setup-db": "node src/db/setup_database.js"
   },
   "dependencies": {
     "@google-cloud/translate": "^8.5.1",
@@ -26,7 +28,7 @@
     "react-dom": "^18.2.0",
     "react-helmet-async": "^2.0.5",
     "react-hot-toast": "^2.4.1",
-    "react-router-dom": "^6.21.3"
+    "react-router-dom": "^6.30.0"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.3.4",
