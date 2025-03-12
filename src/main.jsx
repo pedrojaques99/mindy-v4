@@ -15,7 +15,6 @@ TempoDevtools.init();
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-<<<<<<< HEAD
 // Debug environment variables
 console.log('Environment variables loaded:');
 console.log('VITE_SUPABASE_URL:', supabaseUrl);
@@ -147,16 +146,6 @@ export const supabase = createClient(
     debug: import.meta.env.DEV
   }
 );
-=======
-// Create the Supabase client
-export const supabase = createClient(supabaseUrl, supabaseKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-  },
-});
->>>>>>> f57f29ba5039c0da5aaa4fc19c3877f12b0712be
 
 // Simple connection check function
 export const checkSupabaseConnection = async () => {
